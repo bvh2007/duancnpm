@@ -3,6 +3,7 @@ module.exports = function (controller, auth) {
   const r = express.Router();
   r.get("/document/:id", controller.detail);
   r.get("/me", auth.authenticate, controller.me);
+  r.get("/plans", controller.plans);
   r.get("/subscription/me", auth.authenticate, controller.subscription);
   r.post("/payment", auth.authenticate, controller.createPayment);
   r.post("/document/:id/rating", auth.authenticate, controller.rate);

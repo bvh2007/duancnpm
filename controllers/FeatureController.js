@@ -3,6 +3,10 @@ class FeatureController {
   constructor(service) {
     this.service = service;
   }
+  plans = asyncHandler(async (req, res) =>
+    res.json(await this.service.plans()),
+  );
+
   detail = asyncHandler(async (req, res) =>
     res.json(await this.service.detail(req.params.id, req.user?.id)),
   );

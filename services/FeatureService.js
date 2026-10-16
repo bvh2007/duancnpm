@@ -1,105 +1,197 @@
 const AppError = require("../utils/AppError");
+
 class FeatureService {
   constructor(db) {
     this.db = db;
   }
+
+  // Lấy chi tiết đánh giá và bình luận của tài liệu
   async detail(docId, userId) {
-    const [[r]] = await this.db.pool.query(
-      "SELECT ROUND(AVG(score),2) avg,COUNT(*) count FROM ratings WHERE doc_id=?",
+    const [[rating]] = await this.db.pool.query(
+      `SELECT
+        ROUND(AVG(score), 2) AS avg,
+        COUNT(*) AS count
+      FROM ratings
+      WHERE doc_id = ?`,
       [docId],
     );
+
     let mine = 0;
+
     if (userId) {
-      const [[m]] = await this.db.pool.query(
-        "SELECT score FROM ratings WHERE doc_id=? AND user_id=?",
+      const [[myRating]] = await this.db.pool.query(
+        `SELECT score
+         FROM ratings
+         WHERE doc_id = ? AND user_id = ?`,
         [docId, userId],
       );
-      mine = m?.score || 0;
+
+      mine = myRating?.score || 0;
     }
+
     const [comments] = await this.db.pool.query(
-      "SELECT c.comment_id id,c.parent_id parentId,c.content text,c.created_at at,u.full_name user FROM comments c JOIN users u ON u.user_id=c.user_id WHERE c.doc_id=? AND c.deleted_at IS NULL ORDER BY c.created_at ASC",
+      `SELECT
+        c.comment_id AS id,
+        c.parent_id AS parentId,
+        c.content AS text,
+        c.created_at AS at,
+        u.full_name AS user
+      FROM comments c
+      JOIN users u ON u.user_id = c.user_id
+      WHERE c.doc_id = ?
+        AND c.deleted_at IS NULL
+      ORDER BY c.created_at ASC`,
       [docId],
     );
+
     return {
-      rating: { avg: Number(r.avg) || 0, count: Number(r.count) || 0, mine },
+      rating: {
+        avg: Number(rating.avg) || 0,
+        count: Number(rating.count) || 0,
+        mine,
+      },
       comments,
     };
   }
+
+  // Đánh giá tài liệu
   async rate(docId, userId, score) {
-    if (score < 1 || score > 5)
-      throw new AppError("Điểm đánh giá phải từ 1 đến 5", 400);
+    if (!Number.isInteger(score) || score < 1 || score > 5) {
+      throw new AppError("Điểm đánh giá phải là số nguyên từ 1 đến 5", 400);
+    }
+
     await this.db.pool.query(
-      "INSERT INTO ratings(doc_id,user_id,score) VALUES(?,?,?) ON DUPLICATE KEY UPDATE score=VALUES(score),updated_at=NOW()",
+      `INSERT INTO ratings (doc_id, user_id, score)
+       VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         score = VALUES(score),
+         updated_at = NOW()`,
       [docId, userId, score],
     );
+
     await this.recalc(docId);
+
     return this.detail(docId, userId);
   }
+
+  // Cập nhật điểm đánh giá trung bình của tài liệu
   async recalc(docId) {
     await this.db.pool.query(
-      "UPDATE documents d JOIN (SELECT doc_id,ROUND(AVG(score),2) avg,COUNT(*) cnt FROM ratings WHERE doc_id=? GROUP BY doc_id) r ON r.doc_id=d.doc_id SET d.rating_avg=r.avg,d.rating_count=r.cnt WHERE d.doc_id=?",
+      `UPDATE documents d
+       JOIN (
+         SELECT
+           doc_id,
+           ROUND(AVG(score), 2) AS avg,
+           COUNT(*) AS cnt
+         FROM ratings
+         WHERE doc_id = ?
+         GROUP BY doc_id
+       ) r ON r.doc_id = d.doc_id
+       SET
+         d.rating_avg = r.avg,
+         d.rating_count = r.cnt
+       WHERE d.doc_id = ?`,
       [docId, docId],
     );
   }
+
+  // Thêm hoặc bỏ tài liệu yêu thích
   async favorite(docId, userId) {
-    const [[r]] = await this.db.pool.query(
-      "SELECT 1 x FROM favorites WHERE doc_id=? AND user_id=?",
+    const [[existing]] = await this.db.pool.query(
+      `SELECT 1 AS found
+       FROM favorites
+       WHERE doc_id = ? AND user_id = ?`,
       [docId, userId],
     );
-    if (r) {
+
+    if (existing) {
       await this.db.pool.query(
-        "DELETE FROM favorites WHERE doc_id=? AND user_id=?",
+        `DELETE FROM favorites
+         WHERE doc_id = ? AND user_id = ?`,
         [docId, userId],
       );
+
       return false;
     }
+
     await this.db.pool.query(
-      "INSERT INTO favorites(user_id,doc_id) VALUES(?,?)",
+      `INSERT INTO favorites (user_id, doc_id)
+       VALUES (?, ?)`,
       [userId, docId],
     );
+
     return true;
   }
+
+  // Thêm bình luận
   async comments(docId, userId, text, parentId) {
-    if (!text?.trim()) throw new AppError("Bình luận không được để trống", 400);
+    if (!text?.trim()) {
+      throw new AppError("Bình luận không được để trống", 400);
+    }
+
     await this.db.pool.query(
-      "INSERT INTO comments(parent_id,doc_id,user_id,content) VALUES(?,?,?,?)",
+      `INSERT INTO comments
+        (parent_id, doc_id, user_id, content)
+       VALUES (?, ?, ?, ?)`,
       [parentId || null, docId, userId, text.trim()],
     );
+
     return this.detail(docId, userId);
   }
+
+  // Báo cáo tài liệu
   async report(docId, userId, reason, detail) {
+    if (!reason?.trim()) {
+      throw new AppError("Vui lòng nhập lý do báo cáo", 400);
+    }
+
     await this.db.pool.query(
-      "INSERT INTO reports(doc_id,user_id,reason,detail) VALUES(?,?,?,?)",
-      [docId, userId, reason, detail || null],
+      `INSERT INTO reports
+        (doc_id, user_id, reason, detail)
+       VALUES (?, ?, ?, ?)`,
+      [docId, userId, reason.trim(), detail || null],
     );
-    return { message: "Đã gửi báo cáo" };
+
+    return {
+      message: "Đã gửi báo cáo",
+    };
   }
+
+  // Lấy danh sách yêu thích và thông báo của người dùng
   async me(userId) {
-    const [fav] = await this.db.pool.query(
-      "SELECT d.doc_id id,d.title,d.subject_id FROM favorites f JOIN documents d ON d.doc_id=f.doc_id WHERE f.user_id=? ORDER BY f.created_at DESC",
+    const [favorites] = await this.db.pool.query(
+      `SELECT
+        d.doc_id AS id,
+        d.title,
+        d.subject_id
+       FROM favorites f
+       JOIN documents d ON d.doc_id = f.doc_id
+       WHERE f.user_id = ?
+       ORDER BY f.created_at DESC`,
       [userId],
     );
 
-    const [notes] = await this.db.pool.query(
+    const [notifications] = await this.db.pool.query(
       `SELECT
         notification_id AS id,
         type,
         content AS text,
         is_read AS isRead,
         created_at AS createdAt
-      FROM notifications
-      WHERE user_id=?
-      ORDER BY created_at DESC
-      LIMIT 30`,
+       FROM notifications
+       WHERE user_id = ?
+       ORDER BY created_at DESC
+       LIMIT 30`,
       [userId],
     );
 
     return {
-      favorites: fav.map((x) => String(x.id)),
-      notifications: notes,
+      favorites: favorites.map((item) => String(item.id)),
+      notifications,
     };
   }
 
+  // Lấy gói tài khoản hiện tại
   async subscription(userId) {
     const [[row]] = await this.db.pool.query(
       `SELECT
@@ -108,50 +200,15 @@ class FeatureService {
         s.status,
         s.start_date AS startDate,
         s.end_date AS endDate
-      FROM subscriptions s
-      JOIN plans p ON p.plan_id = s.plan_id
-      WHERE s.user_id = ?
-        AND s.status = 'active'
-        AND (s.end_date IS NULL OR s.end_date >= NOW())
-      ORDER BY s.end_date DESC
-      LIMIT 1`,
+       FROM subscriptions s
+       JOIN plans p ON p.plan_id = s.plan_id
+       WHERE s.user_id = ?
+         AND s.status = 'active'
+         AND (s.end_date IS NULL OR s.end_date >= NOW())
+       ORDER BY s.end_date DESC
+       LIMIT 1`,
       [userId],
     );
-  }
-  async createPayment(userId, planId) {
-    const [[plan]] = await this.db.pool.query(
-      `SELECT plan_id, plan_name, price, duration_days
-       FROM plans
-       WHERE plan_id = ? AND is_active = TRUE`,
-      [planId],
-    );
-
-    if (!plan) {
-      throw new AppError("Gói không tồn tại", 404);
-    }
-
-    if (Number(plan.price) <= 0) {
-      throw new AppError("Không thể thanh toán gói miễn phí", 400);
-    }
-
-    const transactionCode = `TL${Date.now()}${Math.floor(Math.random() * 1000)}`;
-
-    const [result] = await this.db.pool.query(
-      `INSERT INTO payments
-       (user_id, plan_id, amount, payment_method, transaction_code, status)
-       VALUES (?, ?, ?, 'vietqr', ?, 'pending')`,
-      [userId, plan.plan_id, plan.price, transactionCode],
-    );
-
-    return {
-      paymentId: result.insertId,
-      transactionCode,
-      plan: plan.plan_name,
-      amount: Number(plan.price),
-      paymentMethod: "vietqr",
-      status: "pending",
-      durationDays: plan.duration_days,
-    };
 
     if (!row) {
       return {
@@ -172,32 +229,119 @@ class FeatureService {
     };
   }
 
+  // Tạo giao dịch thanh toán
+  async createPayment(userId, planId) {
+    const [[plan]] = await this.db.pool.query(
+      `SELECT
+        plan_id,
+        plan_name,
+        price,
+        duration_days
+       FROM plans
+       WHERE plan_id = ?
+         AND is_active = TRUE`,
+      [planId],
+    );
+
+    if (!plan) {
+      throw new AppError("Gói không tồn tại", 404);
+    }
+
+    if (Number(plan.price) <= 0) {
+      throw new AppError("Không thể thanh toán gói miễn phí", 400);
+    }
+
+    const transactionCode = `TL${Date.now()}${Math.floor(Math.random() * 1000)}`;
+
+    const [result] = await this.db.pool.query(
+      `INSERT INTO payments
+        (user_id, plan_id, amount, payment_method,
+         transaction_code, status)
+       VALUES (?, ?, ?, 'vietqr', ?, 'pending')`,
+      [userId, plan.plan_id, plan.price, transactionCode],
+    );
+
+    return {
+      paymentId: result.insertId,
+      transactionCode,
+      plan: plan.plan_name,
+      amount: Number(plan.price),
+      paymentMethod: "vietqr",
+      status: "pending",
+      durationDays: plan.duration_days,
+    };
+  }
+
+  // Lấy danh sách các gói tài khoản
+  async plans() {
+    const [rows] = await this.db.pool.query(
+      `SELECT
+        plan_id AS id,
+        plan_name AS name,
+        price,
+        duration_days AS durationDays,
+        description
+       FROM plans
+       WHERE is_active = TRUE
+       ORDER BY plan_id`,
+    );
+
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      price: Number(row.price),
+      durationDays: row.durationDays,
+      description: row.description,
+    }));
+  }
+
+  // Chức năng quản trị
   async admin(dbUserId) {
-    const [[u]] = await this.db.pool.query(
-      "SELECT r.role_name FROM users u JOIN roles r ON r.role_id=u.role_id WHERE u.user_id=?",
+    const [[user]] = await this.db.pool.query(
+      `SELECT r.role_name
+       FROM users u
+       JOIN roles r ON r.role_id = u.role_id
+       WHERE u.user_id = ?`,
       [dbUserId],
     );
 
-    if (!["admin", "moderator"].includes(u?.role_name)) {
+    if (!["admin", "moderator"].includes(user?.role_name)) {
       throw new AppError("Bạn không có quyền quản trị", 403);
     }
 
     const [pending] = await this.db.pool.query(
-      'SELECT d.doc_id id,d.title,d.original_filename originalName,d.created_at createdAt,u.full_name uploader FROM documents d JOIN users u ON u.user_id=d.uploader_id WHERE d.status="pending" AND d.deleted_at IS NULL ORDER BY d.created_at ASC',
+      `SELECT
+        d.doc_id AS id,
+        d.title,
+        d.original_filename AS originalName,
+        d.created_at AS createdAt,
+        u.full_name AS uploader
+       FROM documents d
+       JOIN users u ON u.user_id = d.uploader_id
+       WHERE d.status = 'pending'
+         AND d.deleted_at IS NULL
+       ORDER BY d.created_at ASC`,
     );
 
     const [[stats]] = await this.db.pool.query(
-      'SELECT SUM(status="pending") pending,SUM(status="approved") approved,COUNT(*) total FROM documents WHERE deleted_at IS NULL',
+      `SELECT
+        COALESCE(SUM(status = 'pending'), 0) AS pending,
+        COALESCE(SUM(status = 'approved'), 0) AS approved,
+        COUNT(*) AS total
+       FROM documents
+       WHERE deleted_at IS NULL`,
     );
 
-    const [[reports]] = await this.db.pool.query(
-      'SELECT COUNT(*) total FROM reports WHERE status="open"',
+    const [[reportCount]] = await this.db.pool.query(
+      `SELECT COUNT(*) AS total
+       FROM reports
+       WHERE status = 'open'`,
     );
 
     return {
       pending,
       stats,
-      reports: Number(reports.total),
+      reports: Number(reportCount.total),
     };
   }
 }
