@@ -15,7 +15,25 @@ CREATE TABLE IF NOT EXISTS plans (
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS subscriptions (
+  subscription_id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  plan_id INT NOT NULL,
+  start_date DATETIME NOT NULL,
+  end_date DATETIME NULL,
+  status ENUM('active', 'expired', 'cancelled') NOT NULL DEFAULT 'active',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
+  CONSTRAINT fk_subscription_user
+    FOREIGN KEY (user_id)
+    REFERENCES users(user_id)
+    ON DELETE CASCADE,
+
+  CONSTRAINT fk_subscription_plan
+    FOREIGN KEY (plan_id)
+    REFERENCES plans(plan_id)
+    ON DELETE RESTRICT
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS faculties (
   faculty_id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(150) NOT NULL,
@@ -212,3 +230,14 @@ INSERT IGNORE INTO subjects(subject_id,faculty_id,subject_code,name,slug) VALUES
 INSERT IGNORE INTO tags(name,slug) VALUES
 ('Lập trình','lap-trinh'),('SQL','sql'),('Python','python'),('C++','c-plus-plus'),('OOP','oop'),('Mạng máy tính','mang-may-tinh'),('ERD','erd');
 SELECT*from plans;
+DESCRIBE subscriptions;
+SELECT
+    s.subscription_id,
+    s.user_id,
+    s.plan_id,
+    p.plan_name,
+    s.start_date,
+    s.end_date,
+    s.status
+FROM subscriptions s
+JOIN plans p ON s.plan_id = p.plan_id;
