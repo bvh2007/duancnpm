@@ -1,164 +1,82 @@
 <!doctype html>
-
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-    <meta name="theme-color" content="#2563eb" />
-
-    <title>Kho tài liệu - TàiLiệuSV</title>
-
-    <!-- CSS CHUNG CỦA PROJECT -->
+    <title>Tài liệu - TàiLiệuSV</title>
 
     <link rel="stylesheet" href="style.css" />
-
-    <!-- CSS RIÊNG TRANG NÀY -->
-
     <link rel="stylesheet" href="css/documents.css" />
   </head>
 
   <body>
-    <!-- =========================
-     HEADER
-========================= -->
+    <header class="page-header">
+      <div class="container header-inner">
+        <a href="index.html" class="brand"> 📚 TàiLiệuSV </a>
 
-    <header class="navbar">
-      <a class="brand" href="index.html">
-        <span class="brand-mark"> T </span>
+        <nav class="page-nav">
+          <a href="index.html">Trang chủ</a>
+          <a href="documents.html" class="active">Tài liệu</a>
+          <a href="upload.html">Đăng tài liệu</a>
+          <a href="favorites.html">Yêu thích</a>
+        </nav>
 
-        <span> TàiLiệu<span>SV</span> </span>
-      </a>
-
-      <nav class="main-nav">
-        <a href="index.html"> Trang chủ </a>
-
-        <a href="documents.html" style="color: var(--blue)"> Tài liệu </a>
-
-        <a href="index.html#subjects"> Môn học </a>
-
-        <a href="index.html#popular"> Nổi bật </a>
-
-        <a href="index.html#blog"> Góc học tập </a>
-      </nav>
-
-      <div class="nav-actions">
-        <a href="index.html" class="btn btn-outline btn-sm"> Trang chủ </a>
+        <div id="pageUserActions">
+          <a href="index.html" class="btn btn-outline btn-sm"> Đăng nhập </a>
+        </div>
       </div>
     </header>
 
-    <!-- =========================
-     MAIN
-========================= -->
-
     <main>
-      <section class="documents-page">
+      <section class="documents-hero">
         <div class="container">
-          <!-- HEADER -->
+          <p class="eyebrow">KHO TÀI LIỆU SINH VIÊN</p>
 
-          <div class="documents-page-header">
-            <span class="eyebrow"> THƯ VIỆN KIẾN THỨC </span>
+          <h1>Tìm tài liệu bạn cần</h1>
 
-            <h1>Kho tài liệu</h1>
+          <p>
+            Tìm kiếm giáo trình, đề thi, bài tập và tài liệu học tập được chia
+            sẻ bởi sinh viên.
+          </p>
 
-            <p>Tìm kiếm giáo trình, bài giảng, đề thi và tài liệu học tập.</p>
-          </div>
-
-          <!-- SEARCH -->
-
-          <form class="documents-search" id="searchForm">
+          <form id="searchForm" class="documents-search">
             <input
               id="searchInput"
-              type="text"
-              placeholder="Tìm giáo trình, môn học, đề thi..."
+              type="search"
+              placeholder="Nhập tên tài liệu..."
             />
 
-            <button type="submit" class="btn btn-primary">🔍 Tìm kiếm</button>
+            <button class="btn btn-primary" type="submit">🔍 Tìm kiếm</button>
           </form>
+        </div>
+      </section>
 
-          <!-- LAYOUT -->
+      <section class="documents-section">
+        <div class="container">
+          <div class="documents-toolbar">
+            <div>
+              <h2>Danh sách tài liệu</h2>
+              <span id="countText" class="muted"> Đang tải... </span>
+            </div>
 
-          <div class="documents-layout">
-            <!-- FILTER -->
+            <div class="filters">
+              <select id="typeFilter">
+                <option value="">Tất cả loại</option>
+                <option value="Tài liệu">Tài liệu</option>
+                <option value="Đề thi">Đề thi</option>
+              </select>
 
-            <aside class="documents-filter">
-              <h3>⚙ Bộ lọc</h3>
+              <input id="tagFilter" type="text" placeholder="Lọc theo tag..." />
+            </div>
+          </div>
 
-              <label>
-                Loại tài liệu
-
-                <select id="typeFilter">
-                  <option value="">Tất cả</option>
-
-                  <option value="Giáo trình">Giáo trình</option>
-
-                  <option value="Bài giảng">Bài giảng</option>
-
-                  <option value="Đề thi">Đề thi</option>
-
-                  <option value="Ghi chú">Ghi chú</option>
-                </select>
-              </label>
-
-              <label>
-                Khoa
-
-                <select id="facultyFilter">
-                  <option value="">Tất cả khoa</option>
-
-                  <option value="Công nghệ thông tin">
-                    Công nghệ thông tin
-                  </option>
-
-                  <option value="Kinh tế">Kinh tế</option>
-
-                  <option value="Điện - Điện tử">Điện - Điện tử</option>
-
-                  <option value="Ngoại ngữ">Ngoại ngữ</option>
-                </select>
-              </label>
-
-              <label>
-                Môn học
-
-                <select id="subjectFilter">
-                  <option value="">Tất cả môn học</option>
-                </select>
-              </label>
-            </aside>
-
-            <!-- RESULTS -->
-
-            <section class="documents-results">
-              <div class="documents-results-head">
-                <div>
-                  <h2>Tài liệu dành cho bạn</h2>
-
-                  <span id="countText" class="documents-count"></span>
-                </div>
-              </div>
-
-              <!-- JS đưa card vào đây -->
-
-              <div id="docList" class="documents-grid"></div>
-            </section>
+          <div id="docList" class="documents-grid">
+            <div class="empty">Đang tải tài liệu...</div>
           </div>
         </div>
       </section>
     </main>
-
-    <!-- =========================
-     FOOTER
-========================= -->
-
-    <footer class="footer">
-      <p>© 2026 TàiLiệuSV — Học dễ hơn. Chia sẻ nhiều hơn.</p>
-    </footer>
-
-    <!-- =========================
-     JAVASCRIPT
-========================= -->
 
     <script type="module" src="js/pages/DocumentsPage.js"></script>
   </body>
