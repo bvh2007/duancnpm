@@ -1,13 +1,11 @@
 const asyncHandler = require("../utils/asyncHandler");
+
 class FeatureController {
   constructor(service) {
     this.service = service;
   }
   plans = asyncHandler(async (req, res) =>
     res.json(await this.service.plans()),
-  );
-  confirmPayment = asyncHandler(async (req, res) =>
-    res.json(await this.service.confirmPayment(Number(req.params.paymentId))),
   );
   detail = asyncHandler(async (req, res) =>
     res.json(await this.service.detail(req.params.id, req.user?.id)),

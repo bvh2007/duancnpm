@@ -37,18 +37,12 @@ class App {
       storage,
     );
     this.featureService = new FeatureService(db);
-    console.log(
-      "FeatureService đang nạp từ:",
-      require.resolve("./services/FeatureService"),
-    );
-    console.log("Kiểu dữ liệu của plans:", typeof this.featureService.plans);
     this.authController = new AuthController(this.authService);
     this.documentController = new DocumentController(
       this.documentService,
       this.documentRepository,
     );
     this.featureController = new FeatureController(this.featureService);
-
     this.authMiddleware = new AuthMiddleware(token);
     this.uploadMiddleware = new UploadMiddleware({
       dir: Config.uploadDir,

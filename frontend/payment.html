@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thanh toán VietQR</title>
+    <link rel="stylesheet" href="css/payment.css" />
+  </head>
+
+  <body>
+    <main class="payment-page">
+      <div class="payment-card">
+        <h1>Thanh toán gói Pro</h1>
+
+        <p class="payment-status" id="status">Đang tạo giao dịch...</p>
+
+        <div id="payment-info" class="payment-info"></div>
+
+        <div id="qr-container" class="qr-container"></div>
+
+        <p class="guide">
+          Mở ứng dụng ngân hàng, quét mã QR và thanh toán đúng số tiền.
+        </p>
+
+        <button onclick="window.location.href = 'profile.html'">
+          Quay lại tài khoản
+        </button>
+      </div>
+    </main>
+
+    <script type="module" src="js/payment.js"></script>
+  </body>
+</html>

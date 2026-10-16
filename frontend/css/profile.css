@@ -73,3 +73,153 @@
     grid-template-columns: 1fr;
   }
 }
+.upgrade-section {
+  margin-top: 30px;
+  padding: 25px;
+  background: #fff;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
+}
+
+.upgrade-section h2 {
+  margin: 0 0 10px;
+}
+
+.upgrade-section p {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.upgrade-pro-btn {
+  border: none;
+  padding: 12px 25px;
+  border-radius: 10px;
+  background: #2563eb;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.upgrade-pro-btn:hover {
+  opacity: 0.9;
+}
+/* =========================
+   GÓI TÀI KHOẢN
+========================= */
+
+.plan-section {
+  margin-top: 30px;
+}
+
+.plan-section h2 {
+  margin-bottom: 8px;
+}
+
+.plan-section > p {
+  color: var(--muted);
+  margin-bottom: 20px;
+}
+
+.plan-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.plan-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 25px;
+  text-align: center;
+  position: relative;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.plan-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.plan-card h3 {
+  margin: 0 0 10px;
+  font-size: 22px;
+}
+
+.plan-price {
+  font-size: 28px;
+  font-weight: 800;
+  margin: 15px 0;
+}
+
+.plan-duration {
+  color: var(--muted);
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.plan-description {
+  color: var(--muted);
+  min-height: 45px;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.plan-btn {
+  width: 100%;
+  border: none;
+  padding: 12px 18px;
+  border-radius: 10px;
+  background: var(--blue);
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.plan-btn:hover {
+  opacity: 0.9;
+}
+
+.plan-card.current {
+  border: 2px solid var(--blue);
+}
+
+.current-label {
+  display: inline-block;
+  margin-bottom: 12px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  background: #e8f0ff;
+  color: var(--blue);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Pro */
+
+.plan-card.pro {
+  border: 2px solid #2563eb;
+}
+
+/* VIP */
+
+.plan-card.vip {
+  border: 2px solid #f59e0b;
+}
+
+.plan-card.vip .plan-btn {
+  background: #f59e0b;
+}
+
+/* Mobile */
+
+@media (max-width: 800px) {
+  .plan-list {
+    grid-template-columns: 1fr;
+  }
+}
