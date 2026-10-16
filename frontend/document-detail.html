@@ -2,69 +2,49 @@
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <title>Chi tiết tài liệu - TàiLiệuSV</title>
 
     <link rel="stylesheet" href="style.css" />
-
     <link rel="stylesheet" href="css/document-detail.css" />
   </head>
 
   <body>
-    <header class="detail-header">
-      <div class="container detail-header-inner">
-        <a href="index.html" class="brand"> 📚 TàiLiệuSV </a>
+    <div class="top-strip">📚 TàiLiệuSV - Học dễ hơn. Chia sẻ nhiều hơn.</div>
 
-        <nav class="detail-nav">
-          <a href="index.html"> Trang chủ </a>
+    <header class="navbar">
+      <div class="container navbar-inner">
+        <a class="brand" href="index.html">
+          <span class="brand-mark">T</span>
+          <span>TàiLiệu<span>SV</span></span>
+        </a>
 
-          <a href="documents.html"> Tài liệu </a>
-
-          <a href="upload.html"> Đăng tài liệu </a>
-
-          <a href="favorites.html"> Yêu thích </a>
+        <nav class="main-nav">
+          <a href="index.html">Trang chủ</a>
+          <a href="documents.html">Tài liệu</a>
+          <a href="subjects.html">Môn học</a>
+          <a href="index.html#popular">Nổi bật</a>
         </nav>
+
+        <div class="nav-actions">
+          <a href="profile.html" class="btn btn-outline btn-sm"> Hồ sơ </a>
+        </div>
       </div>
     </header>
 
-    <main>
-      <section class="detail-section">
-        <div class="container">
-          <a href="documents.html" class="back-link">
-            ← Quay lại danh sách tài liệu
-          </a>
-
-          <div id="documentDetail" class="document-detail">
-            <div class="empty">Đang tải thông tin tài liệu...</div>
-          </div>
-
-          <section id="commentsSection" class="comments-section">
-            <div class="comments-header">
-              <h2>Bình luận</h2>
-
-              <span id="commentCount" class="muted"> 0 bình luận </span>
-            </div>
-
-            <form id="commentForm" class="comment-form">
-              <textarea
-                id="commentInput"
-                rows="4"
-                placeholder="Viết bình luận của bạn..."
-              ></textarea>
-
-              <button type="submit" class="btn btn-primary">
-                Gửi bình luận
-              </button>
-            </form>
-
-            <div id="commentList" class="comment-list">
-              <div class="empty">Đang tải bình luận...</div>
-            </div>
-          </section>
+    <main class="detail-page">
+      <div class="container">
+        <div class="breadcrumb">
+          <a href="documents.html">Kho tài liệu</a>
+          <span>›</span>
+          <span>Chi tiết</span>
         </div>
-      </section>
+
+        <div id="detailContent">
+          <div class="detail-loading">Đang tải thông tin tài liệu...</div>
+        </div>
+      </div>
     </main>
 
     <script type="module" src="js/pages/DocumentDetailPage.js"></script>

@@ -1,85 +1,39 @@
 import { API_BASE } from "../config.js";
-
 import SessionStore from "../services/SessionStore.js";
-
 import ApiClient from "../services/ApiClient.js";
-
-import DocumentService from "../services/DocumentService.js";
-
 import FeatureStore from "../services/FeatureStore.js";
 
-import { escapeHtml, formatSize, formatDate } from "../utils/helpers.js";
-
 const session = new SessionStore();
-
 const api = new ApiClient(API_BASE, session);
+const features = new FeatureStore(api);
 
-const documentService = new DocumentService(api);
-
-const featureStore = new FeatureStore(api);
+const detailContent = document.getElementById("detailContent");
 
 const params = new URLSearchParams(window.location.search);
+const id = params.get("id");
 
-const documentId = params.get("id");
-
-const detailElement = document.getElementById("documentDetail");
-
-const commentList = document.getElementById("commentList");
-
-const commentCount = document.getElementById("commentCount");
-
-const commentForm = document.getElementById("commentForm");
-
-const commentInput = document.getElementById("commentInput");
-
-if (!documentId) {
-  detailElement.innerHTML = `
-        <div class="empty">
-            Không tìm thấy tài liệu.
-        </div>
-    `;
-} else {
-  loadDocument();
+function escapeHtml(value = "") {
+  return String(value).replace(
+    /[&<>'"]/g,
+    (char) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "'": "&#39;",
+        '"': "&quot;",
+      })[char],
+  );
 }
 
-async function loadDocument() {
-  try {
-    /*
-     * Không dùng:
-     *
-     * GET /api/documents/:id
-     *
-     * vì backend hiện tại chưa có endpoint đó.
-     *
-     * Dùng:
-     *
-     * GET /api/features/document/:id
-     */
+function formatDate(value) {
+  if (!value) return "—";
 
-    const data = await featureStore.loadDetail(documentId);
-
-    renderDocument(data);
-
-    renderComments(data.comments || []);
-  } catch (error) {
-    console.error(error);
-
-    detailElement.innerHTML = `
-            <div class="empty">
-
-                Không thể tải tài liệu.
-
-                <br>
-
-                ${escapeHtml(error.message)}
-
-            </div>
-        `;
-  }
+  return new Date(value).toLocaleDateString("vi-VN");
 }
 
-function renderDocument(data) {
-  const document = data.document;
+function renderDetail(data) {
+  const documentData = data.document || data;
 
   const rating = data.rating || {
     avg: 0,
@@ -87,276 +41,262 @@ function renderDocument(data) {
     mine: 0,
   };
 
-  if (!document) {
-    detailElement.innerHTML = `
-            <div class="empty">
-                Không tìm thấy tài liệu.
-            </div>
-        `;
+  const comments = data.comments || [];
 
-    return;
-  }
+  detailContent.innerHTML = `
+    <article class="detail-box">
 
-  const type = document.type || "Tài liệu";
+      <div class="detail-head">
 
-  const ratingText = rating.avg
-    ? `${Number(rating.avg).toFixed(1)} ⭐`
-    : "Chưa có đánh giá";
+        <div class="detail-file-icon">
+          📄
+        </div>
 
-  detailElement.innerHTML = `
+        <div>
 
-        <div class="detail-top">
+          <span class="tag">
+            ${escapeHtml(documentData.type || "Tài liệu")}
+          </span>
 
-            <div class="detail-main">
+          <h1 class="detail-title">
+            ${escapeHtml(documentData.title || "Không có tiêu đề")}
+          </h1>
 
-                <span class="detail-type">
-
-                    ${escapeHtml(type)}
-
-                </span>
-
-
-                <h1 class="detail-title">
-
-                    ${escapeHtml(document.title)}
-
-                </h1>
-
-
-                <p class="detail-description">
-
-                    ${escapeHtml(document.description || "Chưa có mô tả.")}
-
-                </p>
-
-
-                <div class="detail-meta">
-
-                    <div>
-                        👤 Người đăng:
-                        <strong>
-                            ${escapeHtml(document.uploader?.name || "Ẩn danh")}
-                        </strong>
-                    </div>
-
-
-                    <div>
-                        📄 File:
-                        ${escapeHtml(document.originalName || "")}
-                    </div>
-
-
-                    <div>
-                        💾 Kích thước:
-                        ${formatSize(document.fileSize || 0)}
-                    </div>
-
-
-                    <div>
-                        📅 Ngày đăng:
-                        ${formatDate(document.createdAt)}
-                    </div>
-
-
-                    <div>
-                        ⬇ Lượt tải:
-                        ${document.downloads || 0}
-                    </div>
-
-                </div>
-
-
-                <div class="detail-rating">
-
-                    ⭐ ${ratingText}
-
-                    <span class="muted">
-
-                        (${rating.count || 0}
-                        lượt đánh giá)
-
-                    </span>
-
-                </div>
-
-
-                <div class="rating-form">
-
-                    <button data-rating="1">
-                        1 ⭐
-                    </button>
-
-                    <button data-rating="2">
-                        2 ⭐
-                    </button>
-
-                    <button data-rating="3">
-                        3 ⭐
-                    </button>
-
-                    <button data-rating="4">
-                        4 ⭐
-                    </button>
-
-                    <button data-rating="5">
-                        5 ⭐
-                    </button>
-
-                </div>
-
-            </div>
-
-
-            <div class="detail-actions">
-
-                <a
-                    class="btn btn-primary"
-                    href="${documentService.downloadUrl(document._id)}"
-                >
-                    ⬇ Tải xuống
-                </a>
-
-
-                <button
-                    id="favoriteButton"
-                    class="btn btn-outline"
-                >
-                    ♡ Yêu thích
-                </button>
-
-
-                <button
-                    id="reportButton"
-                    class="btn btn-outline"
-                >
-                    🚩 Báo cáo
-                </button>
-
-            </div>
+          <p class="detail-description">
+            ${escapeHtml(documentData.description || "Chưa có mô tả")}
+          </p>
 
         </div>
 
-    `;
+      </div>
 
+      <div class="detail-meta">
+
+        <span>
+          📚 Môn:
+          <b>${escapeHtml(documentData.subject || "Chưa cập nhật")}</b>
+        </span>
+
+        <span>
+          👤 Người đăng:
+          <b>
+            ${escapeHtml(documentData.uploader?.name || "Ẩn danh")}
+          </b>
+        </span>
+
+        <span>
+          ⬇ ${documentData.downloads || 0} lượt tải
+        </span>
+
+        <span>
+          📅 ${formatDate(documentData.createdAt)}
+        </span>
+
+      </div>
+
+      <div class="detail-actions">
+
+        <a
+          class="btn btn-primary"
+          href="${API_BASE}/documents/${id}/download"
+        >
+          ⬇ Tải tài liệu
+        </a>
+
+        <button
+          class="btn btn-outline"
+          id="favoriteBtn"
+        >
+          ❤️ Yêu thích
+        </button>
+
+      </div>
+
+      <div class="rating-box">
+
+        <h3>⭐ Đánh giá tài liệu</h3>
+
+        <p>
+          Điểm trung bình:
+          <b>
+            ${rating.avg ? rating.avg.toFixed(1) : "Chưa có"}
+          </b>
+          (${rating.count || 0} lượt đánh giá)
+        </p>
+
+        <div class="rating-stars">
+
+          ${[1, 2, 3, 4, 5]
+            .map(
+              (number) => `
+            <button
+              data-rating="${number}"
+              title="Đánh giá ${number} sao"
+            >
+              ${number <= (rating.mine || 0) ? "★" : "☆"}
+            </button>
+          `,
+            )
+            .join("")}
+
+        </div>
+
+      </div>
+
+      <div class="comments-section">
+
+        <h2>
+          💬 Bình luận (${comments.length})
+        </h2>
+
+        <div class="comments-list">
+
+          ${
+            comments.length
+              ? comments
+                  .map(
+                    (comment) => `
+                  <div class="comment">
+
+                    <strong>
+                      ${escapeHtml(comment.user || "Ẩn danh")}
+                    </strong>
+
+                    <p>
+                      ${escapeHtml(comment.text || comment.content || "")}
+                    </p>
+
+                    <small>
+                      ${formatDate(comment.at || comment.createdAt)}
+                    </small>
+
+                  </div>
+                `,
+                  )
+                  .join("")
+              : `
+                <p class="muted">
+                  Chưa có bình luận.
+                </p>
+              `
+          }
+
+        </div>
+
+        ${
+          session.user
+            ? `
+              <form class="comment-form" id="commentForm">
+
+                <input
+                  id="commentInput"
+                  type="text"
+                  placeholder="Viết bình luận..."
+                  required
+                >
+
+                <button class="btn btn-primary">
+                  Gửi
+                </button>
+
+              </form>
+            `
+            : `
+              <p class="muted">
+                Đăng nhập để bình luận.
+              </p>
+            `
+        }
+
+      </div>
+
+    </article>
+  `;
+
+  bindEvents(id);
+}
+
+async function loadDetail() {
+  if (!id) {
+    detailContent.innerHTML = `
+      <div class="detail-error">
+        Không tìm thấy mã tài liệu.
+      </div>
+    `;
+    return;
+  }
+
+  try {
+    const data = await features.loadDetail(id);
+
+    renderDetail(data);
+  } catch (error) {
+    console.error(error);
+
+    detailContent.innerHTML = `
+      <div class="detail-error">
+        Không thể tải tài liệu.
+        <br>
+        ${escapeHtml(error.message)}
+      </div>
+    `;
+  }
+}
+
+function bindEvents(documentId) {
   document.querySelectorAll("[data-rating]").forEach((button) => {
-    button.addEventListener("click", () => {
-      rateDocument(Number(button.dataset.rating));
+    button.addEventListener("click", async () => {
+      if (!session.user) {
+        alert("Bạn cần đăng nhập để đánh giá.");
+        return;
+      }
+
+      try {
+        await features.rate(documentId, Number(button.dataset.rating));
+
+        await loadDetail();
+      } catch (error) {
+        alert(error.message);
+      }
     });
   });
 
   document
-    .getElementById("favoriteButton")
-    .addEventListener("click", toggleFavorite);
+    .getElementById("favoriteBtn")
+    ?.addEventListener("click", async () => {
+      if (!session.user) {
+        alert("Bạn cần đăng nhập để lưu yêu thích.");
+        return;
+      }
+
+      try {
+        const result = await features.toggleFavorite(documentId);
+
+        alert(result ? "Đã thêm vào yêu thích." : "Đã bỏ khỏi yêu thích.");
+      } catch (error) {
+        alert(error.message);
+      }
+    });
 
   document
-    .getElementById("reportButton")
-    .addEventListener("click", reportDocument);
+    .getElementById("commentForm")
+    ?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const input = document.getElementById("commentInput");
+
+      const content = input.value.trim();
+
+      if (!content) return;
+
+      try {
+        await features.addComment(documentId, content);
+
+        await loadDetail();
+      } catch (error) {
+        alert(error.message);
+      }
+    });
 }
 
-async function rateDocument(score) {
-  try {
-    await featureStore.rate(documentId, score);
-
-    alert("Đã ghi nhận đánh giá của bạn.");
-
-    await loadDocument();
-  } catch (error) {
-    alert(error.message);
-  }
-}
-
-async function toggleFavorite() {
-  try {
-    const favorite = await featureStore.toggleFavorite(documentId);
-
-    alert(favorite ? "Đã thêm vào yêu thích." : "Đã bỏ khỏi yêu thích.");
-  } catch (error) {
-    alert(error.message);
-  }
-}
-
-async function reportDocument() {
-  const reason = prompt("Nhập lý do báo cáo tài liệu:");
-
-  if (!reason) {
-    return;
-  }
-
-  try {
-    await featureStore.addReport(documentId, reason);
-
-    alert("Đã gửi báo cáo.");
-  } catch (error) {
-    alert(error.message);
-  }
-}
-
-function renderComments(comments) {
-  commentCount.textContent = `${comments.length} bình luận`;
-
-  if (!comments.length) {
-    commentList.innerHTML = `
-            <div class="empty">
-                Chưa có bình luận nào.
-            </div>
-        `;
-
-    return;
-  }
-
-  commentList.innerHTML = comments
-    .map(
-      (comment) => `
-
-            <article class="comment-item">
-
-                <div class="comment-author">
-
-                    ${escapeHtml(
-                      comment.user?.name || comment.author?.name || "Ẩn danh",
-                    )}
-
-                </div>
-
-
-                <div class="comment-date">
-
-                    ${comment.createdAt ? formatDate(comment.createdAt) : ""}
-
-                </div>
-
-
-                <div>
-
-                    ${escapeHtml(comment.content || "")}
-
-                </div>
-
-            </article>
-
-        `,
-    )
-    .join("");
-}
-
-commentForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-
-  const content = commentInput.value.trim();
-
-  if (!content) {
-    alert("Vui lòng nhập bình luận.");
-
-    return;
-  }
-
-  try {
-    const result = await featureStore.addComment(documentId, content);
-
-    commentInput.value = "";
-
-    renderComments(result.comments || []);
-  } catch (error) {
-    alert(error.message);
-  }
-});
+loadDetail();

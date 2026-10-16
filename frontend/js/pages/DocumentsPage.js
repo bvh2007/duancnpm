@@ -1,3 +1,6 @@
+const params = new URLSearchParams(window.location.search);
+
+const subjectFromUrl = params.get("subject");
 import { API_BASE } from "../config.js";
 import SessionStore from "../services/SessionStore.js";
 import ApiClient from "../services/ApiClient.js";
@@ -22,7 +25,7 @@ const tagFilter = document.getElementById("tagFilter");
 const docListElement = document.getElementById("docList");
 const countText = document.getElementById("countText");
 
-let currentUser = session.getUser();
+let currentUser = session.user;
 
 const documentList = new DocumentList(docListElement, countText, {
   downloadUrl: (id) => documentService.downloadUrl(id),
