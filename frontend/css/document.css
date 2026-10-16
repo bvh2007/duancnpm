@@ -1,0 +1,153 @@
+/* =====================================
+   DOCUMENTS PAGE
+===================================== */
+
+.documents-page {
+    padding: 50px 0 80px;
+}
+
+
+/* PAGE HEADER */
+
+.documents-page-header {
+    margin-bottom: 30px;
+}
+
+.documents-page-header h1 {
+    margin: 0 0 8px;
+    font-size: 34px;
+}
+
+.documents-page-header p {
+    margin: 0;
+    color: var(--muted);
+}
+
+
+/* SEARCH */
+
+.documents-search {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+}
+
+.documents-search input {
+    flex: 1;
+    padding: 13px 15px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    outline: none;
+    background: white;
+}
+
+.documents-search input:focus {
+    border-color: var(--blue);
+}
+
+
+/* LAYOUT */
+
+.documents-layout {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: 25px;
+}
+
+
+/* FILTER */
+
+.documents-filter {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    padding: 20px;
+    height: fit-content;
+}
+
+.documents-filter h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+.documents-filter label {
+    display: block;
+    margin-bottom: 16px;
+}
+
+.documents-filter select {
+    width: 100%;
+    margin-top: 7px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: white;
+}
+
+
+/* RESULTS */
+
+.documents-results {
+    min-width: 0;
+}
+
+.documents-results-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+}
+
+.documents-results-head h2 {
+    margin: 0;
+}
+
+.documents-count {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+
+/* GRID */
+
+.documents-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+
+    gap: 18px;
+}
+
+
+/* RESPONSIVE */
+
+@media (max-width: 1000px) {
+
+    .documents-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+}
+
+
+@media (max-width: 760px) {
+
+    .documents-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .documents-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .documents-search {
+        flex-direction: column;
+    }
+
+    .documents-results-head {
+        align-items: flex-start;
+        gap: 8px;
+        flex-direction: column;
+    }
+
+}
