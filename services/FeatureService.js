@@ -79,38 +79,92 @@ class FeatureService {
       "SELECT d.doc_id id,d.title,d.subject_id FROM favorites f JOIN documents d ON d.doc_id=f.doc_id WHERE f.user_id=? ORDER BY f.created_at DESC",
       [userId],
     );
+
     const [notes] = await this.db.pool.query(
       `SELECT
-  notification_id AS id,
-  type,
-  content AS text,
-  is_read AS isRead,
-  created_at AS createdAt
-FROM notifications
-WHERE user_id=?
-ORDER BY created_at DESC
-LIMIT 30`,
+        notification_id AS id,
+        type,
+        content AS text,
+        is_read AS isRead,
+        created_at AS createdAt
+      FROM notifications
+      WHERE user_id=?
+      ORDER BY created_at DESC
+      LIMIT 30`,
       [userId],
     );
-    return { favorites: fav.map((x) => String(x.id)), notifications: notes };
+
+    return {
+      favorites: fav.map((x) => String(x.id)),
+      notifications: notes,
+    };
   }
+
+  async subscription(userId) {
+    const [[row]] = await this.db.pool.query(
+      `SELECT
+        p.plan_name AS plan,
+        p.price,
+        s.status,
+        s.start_date AS startDate,
+        s.end_date AS endDate
+      FROM subscriptions s
+      JOIN plans p ON p.plan_id = s.plan_id
+      WHERE s.user_id = ?
+        AND s.status = 'active'
+        AND (s.end_date IS NULL OR s.end_date >= NOW())
+      ORDER BY s.end_date DESC
+      LIMIT 1`,
+      [userId],
+    );
+
+    if (!row) {
+      return {
+        plan: "Free",
+        price: 0,
+        status: "active",
+        startDate: null,
+        endDate: null,
+      };
+    }
+
+    return {
+      plan: row.plan,
+      price: Number(row.price),
+      status: row.status,
+      startDate: row.startDate,
+      endDate: row.endDate,
+    };
+  }
+
   async admin(dbUserId) {
     const [[u]] = await this.db.pool.query(
       "SELECT r.role_name FROM users u JOIN roles r ON r.role_id=u.role_id WHERE u.user_id=?",
       [dbUserId],
     );
-    if (!["admin", "moderator"].includes(u?.role_name))
+
+    if (!["admin", "moderator"].includes(u?.role_name)) {
       throw new AppError("Bạn không có quyền quản trị", 403);
+    }
+
     const [pending] = await this.db.pool.query(
       'SELECT d.doc_id id,d.title,d.original_filename originalName,d.created_at createdAt,u.full_name uploader FROM documents d JOIN users u ON u.user_id=d.uploader_id WHERE d.status="pending" AND d.deleted_at IS NULL ORDER BY d.created_at ASC',
     );
+
     const [[stats]] = await this.db.pool.query(
       'SELECT SUM(status="pending") pending,SUM(status="approved") approved,COUNT(*) total FROM documents WHERE deleted_at IS NULL',
     );
+
     const [[reports]] = await this.db.pool.query(
       'SELECT COUNT(*) total FROM reports WHERE status="open"',
     );
-    return { pending, stats, reports: Number(reports.total) };
+
+    return {
+      pending,
+      stats,
+      reports: Number(reports.total),
+    };
   }
 }
+
 module.exports = FeatureService;
