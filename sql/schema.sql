@@ -265,3 +265,6 @@ FROM subscriptions s
 JOIN plans p ON s.plan_id = p.plan_id;
 DESCRIBE payments;
 SELECT * FROM payments;
+SELECT * FROM payments
+ORDER BY payment_id DESC
+LIMIT 5;
