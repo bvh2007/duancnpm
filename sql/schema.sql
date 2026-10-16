@@ -34,6 +34,28 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     REFERENCES plans(plan_id)
     ON DELETE RESTRICT
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS payments (
+  payment_id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  plan_id INT NOT NULL,
+  amount DECIMAL(12,2) NOT NULL,
+  payment_method VARCHAR(30) NOT NULL DEFAULT 'vietqr',
+  transaction_code VARCHAR(100) UNIQUE,
+  status ENUM('pending', 'paid', 'failed', 'cancelled')
+    NOT NULL DEFAULT 'pending',
+  paid_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_payment_user
+    FOREIGN KEY (user_id)
+    REFERENCES users(user_id)
+    ON DELETE CASCADE,
+
+  CONSTRAINT fk_payment_plan
+    FOREIGN KEY (plan_id)
+    REFERENCES plans(plan_id)
+    ON DELETE RESTRICT
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS faculties (
   faculty_id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(150) NOT NULL,
@@ -241,3 +263,5 @@ SELECT
     s.status
 FROM subscriptions s
 JOIN plans p ON s.plan_id = p.plan_id;
+DESCRIBE payments;
+SELECT * FROM payments;
