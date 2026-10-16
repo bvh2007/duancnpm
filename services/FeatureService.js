@@ -117,6 +117,41 @@ class FeatureService {
       LIMIT 1`,
       [userId],
     );
+  }
+  async createPayment(userId, planId) {
+    const [[plan]] = await this.db.pool.query(
+      `SELECT plan_id, plan_name, price, duration_days
+       FROM plans
+       WHERE plan_id = ? AND is_active = TRUE`,
+      [planId],
+    );
+
+    if (!plan) {
+      throw new AppError("Gói không tồn tại", 404);
+    }
+
+    if (Number(plan.price) <= 0) {
+      throw new AppError("Không thể thanh toán gói miễn phí", 400);
+    }
+
+    const transactionCode = `TL${Date.now()}${Math.floor(Math.random() * 1000)}`;
+
+    const [result] = await this.db.pool.query(
+      `INSERT INTO payments
+       (user_id, plan_id, amount, payment_method, transaction_code, status)
+       VALUES (?, ?, ?, 'vietqr', ?, 'pending')`,
+      [userId, plan.plan_id, plan.price, transactionCode],
+    );
+
+    return {
+      paymentId: result.insertId,
+      transactionCode,
+      plan: plan.plan_name,
+      amount: Number(plan.price),
+      paymentMethod: "vietqr",
+      status: "pending",
+      durationDays: plan.duration_days,
+    };
 
     if (!row) {
       return {

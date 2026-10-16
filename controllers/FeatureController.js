@@ -46,6 +46,13 @@ class FeatureController {
   subscription = asyncHandler(async (req, res) =>
     res.json(await this.service.subscription(req.user.id)),
   );
+  createPayment = asyncHandler(async (req, res) =>
+    res
+      .status(201)
+      .json(
+        await this.service.createPayment(req.user.id, Number(req.body.planId)),
+      ),
+  );
   admin = asyncHandler(async (req, res) =>
     res.json(await this.service.admin(req.user.id)),
   );

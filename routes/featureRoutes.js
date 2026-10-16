@@ -4,6 +4,7 @@ module.exports = function (controller, auth) {
   r.get("/document/:id", controller.detail);
   r.get("/me", auth.authenticate, controller.me);
   r.get("/subscription/me", auth.authenticate, controller.subscription);
+  r.post("/payment", auth.authenticate, controller.createPayment);
   r.post("/document/:id/rating", auth.authenticate, controller.rate);
   r.post("/document/:id/favorite", auth.authenticate, controller.favorite);
   r.post("/document/:id/comments", auth.authenticate, controller.comment);
