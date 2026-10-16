@@ -6,6 +6,15 @@ CREATE TABLE IF NOT EXISTS roles (
   role_name VARCHAR(50) NOT NULL UNIQUE,
   description VARCHAR(255)
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS plans (
+  plan_id INT AUTO_INCREMENT PRIMARY KEY,
+  plan_name VARCHAR(50) NOT NULL UNIQUE,
+  price DECIMAL(12,2) NOT NULL DEFAULT 0,
+  duration_days INT NOT NULL DEFAULT 0,
+  description VARCHAR(255),
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS faculties (
   faculty_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -173,6 +182,12 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 INSERT IGNORE INTO roles(role_id, role_name, description) VALUES
 (1,'student','Sinh viên'),(2,'moderator','Người duyệt nội dung'),(3,'admin','Quản trị viên');
+INSERT IGNORE INTO plans
+(plan_id, plan_name, price, duration_days, description)
+VALUES
+(1, 'Free', 0, 0, 'Gói miễn phí'),
+(2, 'Pro', 49000, 30, 'Gói Pro dành cho sinh viên'),
+(3, 'VIP', 99000, 30, 'Gói VIP với đầy đủ quyền lợi');
 
 INSERT IGNORE INTO faculties(faculty_id,name,slug) VALUES
 (1,'Công nghệ thông tin','cong-nghe-thong-tin'),
@@ -196,3 +211,4 @@ INSERT IGNORE INTO subjects(subject_id,faculty_id,subject_code,name,slug) VALUES
 
 INSERT IGNORE INTO tags(name,slug) VALUES
 ('Lập trình','lap-trinh'),('SQL','sql'),('Python','python'),('C++','c-plus-plus'),('OOP','oop'),('Mạng máy tính','mang-may-tinh'),('ERD','erd');
+SELECT*from plans;
