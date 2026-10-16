@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Tài liệu - TàiLiệuSV</title>
+
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="css/documents.css" />
+  </head>
+
+  <body>
+    <header class="page-header">
+      <div class="container header-inner">
+        <a href="index.html" class="brand"> 📚 TàiLiệuSV </a>
+
+        <nav class="page-nav">
+          <a href="index.html">Trang chủ</a>
+          <a href="documents.html" class="active">Tài liệu</a>
+          <a href="upload.html">Đăng tài liệu</a>
+          <a href="favorites.html">Yêu thích</a>
+        </nav>
+
+        <div id="pageUserActions">
+          <a href="index.html" class="btn btn-outline btn-sm"> Đăng nhập </a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="documents-hero">
+        <div class="container">
+          <p class="eyebrow">KHO TÀI LIỆU SINH VIÊN</p>
+
+          <h1>Tìm tài liệu bạn cần</h1>
+
+          <p>
+            Tìm kiếm giáo trình, đề thi, bài tập và tài liệu học tập được chia
+            sẻ bởi sinh viên.
+          </p>
+
+          <form id="searchForm" class="documents-search">
+            <input
+              id="searchInput"
+              type="search"
+              placeholder="Nhập tên tài liệu..."
+            />
+
+            <button class="btn btn-primary" type="submit">🔍 Tìm kiếm</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="documents-section">
+        <div class="container">
+          <div class="documents-toolbar">
+            <div>
+              <h2>Danh sách tài liệu</h2>
+              <span id="countText" class="muted"> Đang tải... </span>
+            </div>
+
+            <div class="filters">
+              <select id="typeFilter">
+                <option value="">Tất cả loại</option>
+                <option value="Tài liệu">Tài liệu</option>
+                <option value="Đề thi">Đề thi</option>
+              </select>
+
+              <input id="tagFilter" type="text" placeholder="Lọc theo tag..." />
+            </div>
+          </div>
+
+          <div id="docList" class="documents-grid">
+            <div class="empty">Đang tải tài liệu...</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="js/pages/DocumentsPage.js"></script>
+  </body>
+</html>
