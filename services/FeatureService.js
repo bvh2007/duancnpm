@@ -294,6 +294,148 @@ class FeatureService {
       description: row.description,
     }));
   }
+  // Xác nhận thanh toán và kích hoạt gói
+  async confirmPayment(paymentId) {
+    const connection = await this.db.pool.getConnection();
+
+    try {
+      await connection.beginTransaction();
+
+      const [[payment]] = await connection.query(
+        `SELECT
+          payment_id,
+          user_id,
+          plan_id,
+          amount,
+          status
+         FROM payments
+         WHERE payment_id = ?
+         FOR UPDATE`,
+        [paymentId],
+      );
+
+      if (!payment) {
+        throw new AppError("Không tìm thấy giao dịch", 404);
+      }
+
+      // Nếu giao dịch đã được xử lý rồi thì không xử lý lại
+      if (payment.status === "paid") {
+        const [[subscription]] = await connection.query(
+          `SELECT
+            subscription_id,
+            plan_id,
+            status,
+            start_date,
+            end_date
+           FROM subscriptions
+           WHERE user_id = ?
+             AND plan_id = ?
+             AND status = 'active'
+           ORDER BY subscription_id DESC
+           LIMIT 1`,
+          [payment.user_id, payment.plan_id],
+        );
+
+        await connection.commit();
+
+        return {
+          message: "Giao dịch đã được xác nhận trước đó",
+          paymentId: payment.payment_id,
+          status: "paid",
+          subscription: subscription || null,
+        };
+      }
+
+      if (payment.status !== "pending") {
+        throw new AppError(
+          `Không thể xác nhận giao dịch đang ở trạng thái ${payment.status}`,
+          400,
+        );
+      }
+
+      const [[plan]] = await connection.query(
+        `SELECT
+          plan_id,
+          plan_name,
+          price,
+          duration_days
+         FROM plans
+         WHERE plan_id = ?
+           AND is_active = TRUE`,
+        [payment.plan_id],
+      );
+
+      if (!plan) {
+        throw new AppError("Gói tài khoản không tồn tại", 404);
+      }
+
+      // Kiểm tra số tiền giao dịch
+      if (Number(payment.amount) !== Number(plan.price)) {
+        throw new AppError("Số tiền thanh toán không khớp với gói", 400);
+      }
+
+      // Đánh dấu payment đã thanh toán
+      await connection.query(
+        `UPDATE payments
+         SET
+           status = 'paid',
+           paid_at = NOW()
+         WHERE payment_id = ?`,
+        [payment.payment_id],
+      );
+
+      // Hủy subscription active cũ của user
+      await connection.query(
+        `UPDATE subscriptions
+         SET status = 'cancelled'
+         WHERE user_id = ?
+           AND status = 'active'`,
+        [payment.user_id],
+      );
+
+      // Tạo subscription mới
+      const [subscriptionResult] = await connection.query(
+        `INSERT INTO subscriptions
+          (user_id, plan_id, start_date, end_date, status)
+         VALUES
+          (?, ?, NOW(),
+           CASE
+             WHEN ? > 0
+             THEN DATE_ADD(NOW(), INTERVAL ? DAY)
+             ELSE NULL
+           END,
+           'active')`,
+        [
+          payment.user_id,
+          payment.plan_id,
+          plan.duration_days,
+          plan.duration_days,
+        ],
+      );
+
+      await connection.commit();
+
+      return {
+        message: `Đã kích hoạt gói ${plan.plan_name}`,
+        paymentId: payment.payment_id,
+        status: "paid",
+        subscription: {
+          subscriptionId: subscriptionResult.insertId,
+          userId: payment.user_id,
+          planId: plan.plan_id,
+          plan: plan.plan_name,
+          price: Number(plan.price),
+          startDate: new Date(),
+          durationDays: plan.duration_days,
+        },
+      };
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
 
   // Chức năng quản trị
   async admin(dbUserId) {
