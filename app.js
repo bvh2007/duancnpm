@@ -35,6 +35,7 @@ class App {
     this.documentService = new DocumentService(
       this.documentRepository,
       storage,
+      db,
     );
     this.featureService = new FeatureService(db);
     this.authController = new AuthController(this.authService);

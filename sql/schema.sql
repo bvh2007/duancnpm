@@ -286,3 +286,68 @@ WHERE doc_id = 41;
 SELECT access_level
 FROM documents
 WHERE doc_id = 41;
+SELECT id, title, access_level
+FROM documents;
+DESCRIBE documents;
+SELECT doc_id, title, access_level
+FROM documents;
+UPDATE documents
+SET access_level = 'pro'
+WHERE doc_id = 2;
+SELECT doc_id, title, access_level
+FROM documents;
+SELECT 
+    s.user_id,
+    p.plan_name,
+    s.status,
+    s.end_date
+FROM subscriptions s
+JOIN plans p ON p.plan_id = s.plan_id
+WHERE s.user_id = YOUR_USER_ID;
+UPDATE documents
+SET access_level = 'vip'
+WHERE doc_id = 3;
+SELECT doc_id, title, access_level
+FROM documents
+WHERE access_level = 'vip';
+UPDATE documents
+SET access_level = 'vip'
+WHERE doc_id = 12;
+SELECT doc_id, title, access_level
+FROM documents
+WHERE access_level = 'vip';
+SELECT 
+    doc_id,
+    title,
+    access_level,
+    status,
+    created_at,
+    updated_at
+FROM documents
+WHERE title LIKE '%Đề thi thử mạng máy tính%'
+ORDER BY updated_at DESC;
+SELECT *
+FROM documents
+WHERE doc_id = 3;
+SELECT
+    s.user_id,
+    s.plan_id,
+    p.plan_name,
+    s.status,
+    s.start_date,
+    s.end_date
+FROM subscriptions s
+JOIN plans p ON p.plan_id = s.plan_id
+WHERE s.user_id = 17;
+SELECT
+    s.user_id,
+    p.plan_name AS plan,
+    s.status,
+    s.start_date,
+    s.end_date
+FROM subscriptions s
+JOIN plans p ON p.plan_id = s.plan_id
+WHERE s.user_id = 17
+  AND s.status = 'active'
+  AND (s.end_date IS NULL OR s.end_date >= NOW())
+ORDER BY s.end_date DESC;

@@ -4,8 +4,47 @@ class FeatureService {
   constructor(db) {
     this.db = db;
   }
-
   async detail(docId, userId) {
+    // 1. Lấy thông tin tài liệu
+    const [[documentData]] = await this.db.pool.query(
+      `SELECT
+      d.doc_id AS _id,
+      d.title,
+      d.description,
+      d.original_filename AS originalName,
+      d.file_path AS filePath,
+      d.file_size AS fileSize,
+      d.file_type AS fileType,
+      d.document_type AS type,
+      d.access_level AS accessLevel,
+      d.download_count AS downloads,
+      d.view_count AS views,
+      d.rating_avg AS ratingAvg,
+      d.rating_count AS ratingCount,
+      d.status,
+      d.created_at AS createdAt,
+      d.updated_at AS updatedAt,
+      u.user_id AS uploaderId,
+      u.full_name AS uploaderName,
+      s.name AS subject,
+      f.name AS faculty,
+      c.name AS category
+    FROM documents d
+    JOIN users u ON u.user_id = d.uploader_id
+    JOIN subjects s ON s.subject_id = d.subject_id
+    JOIN faculties f ON f.faculty_id = s.faculty_id
+    JOIN categories c ON c.category_id = d.category_id
+    WHERE d.doc_id = ?
+      AND d.deleted_at IS NULL
+    LIMIT 1`,
+      [docId],
+    );
+
+    if (!documentData) {
+      throw new AppError("Không tìm thấy tài liệu", 404);
+    }
+
+    // 2. Lấy đánh giá
     const [[r]] = await this.db.pool.query(
       "SELECT ROUND(AVG(score),2) avg,COUNT(*) count FROM ratings WHERE doc_id=?",
       [docId],
@@ -22,21 +61,59 @@ class FeatureService {
       mine = m?.score || 0;
     }
 
+    // 3. Lấy bình luận
     const [comments] = await this.db.pool.query(
-      "SELECT c.comment_id id,c.parent_id parentId,c.content text,c.created_at at,u.full_name user FROM comments c JOIN users u ON u.user_id=c.user_id WHERE c.doc_id=? AND c.deleted_at IS NULL ORDER BY c.created_at ASC",
+      `SELECT
+      c.comment_id id,
+      c.parent_id parentId,
+      c.content text,
+      c.created_at at,
+      u.full_name user
+    FROM comments c
+    JOIN users u ON u.user_id=c.user_id
+    WHERE c.doc_id=?
+      AND c.deleted_at IS NULL
+    ORDER BY c.created_at ASC`,
       [docId],
     );
 
+    // 4. Trả toàn bộ thông tin
     return {
+      document: {
+        _id: String(documentData._id),
+        title: documentData.title,
+        description: documentData.description,
+        originalName: documentData.originalName,
+        filePath: documentData.filePath,
+        fileSize: Number(documentData.fileSize),
+        fileType: documentData.fileType,
+        type: documentData.type,
+        accessLevel: documentData.accessLevel,
+        downloads: Number(documentData.downloads),
+        views: Number(documentData.views),
+        ratingAvg: Number(documentData.ratingAvg),
+        ratingCount: Number(documentData.ratingCount),
+        status: documentData.status,
+        createdAt: documentData.createdAt,
+        updatedAt: documentData.updatedAt,
+        subject: documentData.subject,
+        faculty: documentData.faculty,
+        category: documentData.category,
+        uploader: {
+          _id: String(documentData.uploaderId),
+          name: documentData.uploaderName,
+        },
+      },
+
       rating: {
         avg: Number(r.avg) || 0,
         count: Number(r.count) || 0,
         mine,
       },
+
       comments,
     };
   }
-
   async rate(docId, userId, score) {
     if (score < 1 || score > 5) {
       throw new AppError("Điểm đánh giá phải từ 1 đến 5", 400);
