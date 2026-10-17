@@ -117,6 +117,7 @@ CREATE TABLE IF NOT EXISTS documents (
   thumbnail_url VARCHAR(255) NULL,
   file_type VARCHAR(50) NOT NULL,
   document_type VARCHAR(50) NOT NULL DEFAULT 'Tài liệu',
+  access_level ENUM('free', 'pro', 'vip') NOT NULL DEFAULT 'free',
   file_size BIGINT NOT NULL DEFAULT 0,
   status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
   reject_reason VARCHAR(255) NULL,
@@ -268,3 +269,20 @@ SELECT * FROM payments;
 SELECT * FROM payments
 ORDER BY payment_id DESC
 LIMIT 5;
+ALTER TABLE documents
+ADD COLUMN access_level ENUM('free', 'pro', 'vip')
+NOT NULL DEFAULT 'free'
+AFTER document_type;
+DESCRIBE documents;
+SELECT doc_id, title, access_level
+FROM documents
+LIMIT 20;
+SELECT doc_id, title, access_level
+FROM documents
+LIMIT 20;
+SELECT doc_id, title, access_level
+FROM documents
+WHERE doc_id = 41;
+SELECT access_level
+FROM documents
+WHERE doc_id = 41;
