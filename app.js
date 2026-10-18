@@ -68,6 +68,21 @@ class App {
       "/api/features",
       featureRoutes(this.featureController, this.authMiddleware),
     );
+    this.express.get("/api/categories", async (req, res, next) => {
+      try {
+        const [rows] = await this.db.pool.query(
+          `SELECT
+        category_id AS id,
+        name
+       FROM categories
+       ORDER BY name ASC`,
+        );
+
+        res.json(rows);
+      } catch (error) {
+        next(error);
+      }
+    });
     this.express.use("/uploads", express.static(Config.uploadDir));
     this.express.use(express.static(Config.frontendDir));
     this.express.get("/api/health", (req, res) =>

@@ -245,17 +245,16 @@ class FeatureService {
       endDate: row.endDate,
     };
   }
-
   async createPayment(userId, planId) {
     const [[plan]] = await this.db.pool.query(
       `SELECT
-        plan_id,
-        plan_name,
-        price,
-        duration_days
-      FROM plans
-      WHERE plan_id = ?
-        AND is_active = TRUE`,
+      plan_id,
+      plan_name,
+      price,
+      duration_days
+     FROM plans
+     WHERE plan_id = ?
+       AND is_active = TRUE`,
       [planId],
     );
 
@@ -263,27 +262,70 @@ class FeatureService {
       throw new AppError("Gói không tồn tại", 404);
     }
 
-    if (Number(plan.price) <= 0) {
+    const amount = Number(plan.price);
+
+    if (amount <= 0) {
       throw new AppError("Không thể thanh toán gói miễn phí", 400);
     }
 
-    const transactionCode = `TL${Date.now()}${Math.floor(Math.random() * 1000)}`;
+    // Mã đơn hàng duy nhất
+    const orderCode = Date.now();
 
+    // Nội dung chuyển khoản
+    const transactionCode = `TL${orderCode}`;
+
+    // Tạo payment ở trạng thái pending
     const [result] = await this.db.pool.query(
       `INSERT INTO payments
-        (user_id, plan_id, amount, payment_method, transaction_code, status)
-       VALUES (?, ?, ?, 'vietqr', ?, 'pending')`,
-      [userId, plan.plan_id, plan.price, transactionCode],
+      (
+        user_id,
+        plan_id,
+        amount,
+        payment_method,
+        transaction_code,
+        order_code,
+        status
+      )
+     VALUES (?, ?, ?, 'vietqr', ?, ?, 'pending')`,
+      [userId, plan.plan_id, amount, transactionCode, orderCode],
+    );
+
+    const paymentId = result.insertId;
+
+    // Tạo Quick Link VietQR
+    const bin = process.env.VIETQR_BIN;
+    const accountNo = process.env.VIETQR_ACCOUNT_NO;
+    const templateId = process.env.VIETQR_TEMPLATE_ID;
+    const accountName = process.env.VIETQR_ACCOUNT_NAME;
+
+    if (!bin || !accountNo || !templateId || !accountName) {
+      throw new AppError("Chưa cấu hình đầy đủ thông tin VietQR", 500);
+    }
+
+    const checkoutUrl =
+      `https://api.vietqr.io/image/${bin}-${accountNo}-${templateId}.jpg` +
+      `?amount=${amount}` +
+      `&addInfo=${encodeURIComponent(transactionCode)}` +
+      `&accountName=${encodeURIComponent(accountName)}`;
+
+    // Lưu Quick Link vào database
+    await this.db.pool.query(
+      `UPDATE payments
+     SET checkout_url = ?
+     WHERE payment_id = ?`,
+      [checkoutUrl, paymentId],
     );
 
     return {
-      paymentId: result.insertId,
+      paymentId,
       transactionCode,
+      orderCode,
       plan: plan.plan_name,
-      amount: Number(plan.price),
+      amount,
       paymentMethod: "vietqr",
       status: "pending",
       durationDays: plan.duration_days,
+      checkoutUrl,
     };
   }
   async confirmPayment(paymentId, userId) {

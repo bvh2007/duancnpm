@@ -351,3 +351,68 @@ WHERE s.user_id = 17
   AND s.status = 'active'
   AND (s.end_date IS NULL OR s.end_date >= NOW())
 ORDER BY s.end_date DESC;
+SELECT
+    payment_id,
+    user_id,
+    plan_id,
+    amount,
+    transaction_code,
+    order_code,
+    status,
+    checkout_url
+FROM payments
+ORDER BY payment_id DESC
+LIMIT 1;
+SELECT
+    payment_id,
+    user_id,
+    plan_id,
+    amount,
+    payment_method,
+    transaction_code,
+    order_code,
+    status,
+    checkout_url,
+    created_at
+FROM payments
+ORDER BY payment_id DESC
+LIMIT 5;
+SELECT
+    plan_id,
+    plan_name,
+    price,
+    duration_days,
+    is_active
+FROM plans
+ORDER BY plan_id;
+SELECT
+    payment_id,
+    user_id,
+    plan_id,
+    amount,
+    status,
+    order_code,
+    transaction_code
+FROM payments
+ORDER BY payment_id DESC
+LIMIT 5;
+SELECT
+    subscription_id,
+    user_id,
+    plan_id,
+    start_date,
+    end_date,
+    status
+FROM subscriptions
+WHERE user_id = 17
+ORDER BY subscription_id DESC;
+SELECT
+    subscription_id,
+    user_id,
+    plan_id,
+    start_date,
+    end_date,
+    status
+FROM subscriptions
+WHERE user_id = 17
+ORDER BY subscription_id DESC;
