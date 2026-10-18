@@ -5,6 +5,7 @@ module.exports = function (controller, auth) {
   r.get("/me", auth.authenticate, controller.me);
   r.get("/plans", controller.plans);
   r.get("/subscription/me", auth.authenticate, controller.subscription);
+  r.post("/payment/webhook", controller.paymentWebhook);
   r.post("/payment", auth.authenticate, controller.createPayment);
   r.post(
     "/payment/:paymentId/confirm",

@@ -1,6 +1,24 @@
 const asyncHandler = require("../utils/asyncHandler");
 
 class FeatureController {
+  paymentWebhook = asyncHandler(async (req, res) => {
+    const secureToken = req.headers["secure-token"];
+
+    if (!secureToken || secureToken !== process.env.VIETQR_SECURE_TOKEN) {
+      return res.status(401).json({
+        code: "01",
+        desc: "Unauthorized",
+      });
+    }
+
+    const result = await this.service.handlePaymentWebhook(req.body);
+
+    res.status(200).json({
+      code: "00",
+      desc: "success",
+      data: result,
+    });
+  });
   constructor(service) {
     this.service = service;
   }

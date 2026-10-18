@@ -414,3 +414,109 @@ ORDER BY subscription_id DESC;
 ALTER TABLE payments
 ADD COLUMN order_code BIGINT NULL UNIQUE,
 ADD COLUMN checkout_url TEXT NULL;
+SELECT
+    payment_id,
+    user_id,
+    plan_id,
+    amount,
+    transaction_code,
+    order_code,
+    status,
+    checkout_url
+FROM payments
+ORDER BY payment_id DESC
+LIMIT 1;
+SELECT
+    payment_id,
+    user_id,
+    plan_id,
+    amount,
+    transaction_code,
+    order_code,
+    status
+FROM payments
+WHERE status = 'pending'
+ORDER BY payment_id DESC
+LIMIT 1;
+SELECT
+    payment_id,
+    order_code,
+    transaction_code,
+    amount,
+    status,
+    paid_at
+FROM payments
+WHERE payment_id = 33;
+SELECT
+    payment_id,
+    order_code,
+    transaction_code,
+    amount,
+    status
+FROM payments
+WHERE payment_id = 33;
+SELECT
+    payment_id,
+    order_code,
+    transaction_code,
+    amount,
+    status
+FROM payments
+WHERE order_code = 179232541324;
+SELECT
+    payment_id,
+    amount,
+    transaction_code,
+    status
+FROM payments
+WHERE payment_id = 33
+  AND amount = 49000;
+  SELECT
+    payment_id,
+    CAST(order_code AS CHAR) AS order_code_text,
+    LENGTH(CAST(order_code AS CHAR)) AS order_code_length,
+    transaction_code,
+    amount,
+    status
+FROM payments
+WHERE payment_id = 33;
+SELECT
+    payment_id,
+    order_code,
+    transaction_code,
+    amount,
+    status
+FROM payments
+WHERE CAST(order_code AS CHAR) = '179232541324';
+SELECT
+    payment_id,
+    order_code,
+    CAST(order_code AS CHAR) AS code_text
+FROM payments
+WHERE payment_id = 33
+   OR order_code IS NOT NULL;
+   SELECT
+    subscription_id,
+    user_id,
+    plan_id,
+    status,
+    start_date,
+    end_date
+FROM subscriptions
+WHERE user_id = 17
+ORDER BY subscription_id DESC;
+SELECT plan_id, plan_name, price, duration_days
+FROM plans
+ORDER BY plan_id;
+SELECT
+    s.subscription_id,
+    s.user_id,
+    s.plan_id,
+    p.plan_name,
+    s.status,
+    s.start_date,
+    s.end_date
+FROM subscriptions s
+JOIN plans p ON p.plan_id = s.plan_id
+WHERE s.user_id = 17
+ORDER BY s.subscription_id DESC;

@@ -301,13 +301,30 @@ class FeatureService {
     if (!bin || !accountNo || !templateId || !accountName) {
       throw new AppError("Chưa cấu hình đầy đủ thông tin VietQR", 500);
     }
-
     const checkoutUrl =
-      `https://api.vietqr.io/image/${bin}-${accountNo}-${templateId}.jpg` +
+      `https://img.vietqr.io/image/${bin}-${accountNo}-compact.svg` +
       `?amount=${amount}` +
       `&addInfo=${encodeURIComponent(transactionCode)}` +
       `&accountName=${encodeURIComponent(accountName)}`;
 
+    await this.db.pool.query(
+      `UPDATE payments
+   SET checkout_url = ?
+   WHERE payment_id = ?`,
+      [checkoutUrl, paymentId],
+    );
+
+    return {
+      paymentId,
+      transactionCode,
+      orderCode,
+      plan: plan.plan_name,
+      amount,
+      paymentMethod: "vietqr",
+      status: "pending",
+      durationDays: plan.duration_days,
+      checkoutUrl,
+    };
     // Lưu Quick Link vào database
     await this.db.pool.query(
       `UPDATE payments
@@ -326,6 +343,133 @@ class FeatureService {
       status: "pending",
       durationDays: plan.duration_days,
       checkoutUrl,
+    };
+  }
+  async handlePaymentWebhook(payload) {
+    const items = Array.isArray(payload?.data) ? payload.data : [];
+
+    if (!items.length) {
+      return {
+        message: "Không có giao dịch",
+      };
+    }
+
+    let processed = 0;
+
+    for (const item of items) {
+      const orderCode = Number(item.orderCode);
+      const amount = Number(item.amount);
+
+      if (!orderCode || !amount) {
+        continue;
+      }
+
+      const [[payment]] = await this.db.pool.query(
+        `SELECT
+        payment_id,
+        user_id,
+        plan_id,
+        amount,
+        transaction_code,
+        status
+       FROM payments
+       WHERE order_code = ?
+       LIMIT 1`,
+        [orderCode],
+      );
+
+      if (!payment) {
+        continue;
+      }
+
+      // Đã xử lý rồi thì bỏ qua
+      if (payment.status === "paid") {
+        continue;
+      }
+
+      // Kiểm tra số tiền
+      if (Number(payment.amount) !== amount) {
+        console.warn(`⚠️ Sai số tiền payment ${payment.payment_id}:`, {
+          expected: Number(payment.amount),
+          received: amount,
+        });
+        continue;
+      }
+
+      // Kiểm tra nội dung giao dịch
+      const description = String(item.description || "");
+
+      if (!description.includes(String(payment.transaction_code))) {
+        console.warn(`⚠️ Sai nội dung giao dịch payment ${payment.payment_id}`);
+        continue;
+      }
+
+      // Đánh dấu đã thanh toán
+      await this.db.pool.query(
+        `UPDATE payments
+       SET
+         status = 'paid',
+         paid_at = NOW()
+       WHERE payment_id = ?
+         AND status = 'pending'`,
+        [payment.payment_id],
+      );
+
+      // Lấy thông tin gói
+      const [[plan]] = await this.db.pool.query(
+        `SELECT
+        plan_id,
+        plan_name,
+        duration_days
+       FROM plans
+       WHERE plan_id = ?
+       LIMIT 1`,
+        [payment.plan_id],
+      );
+
+      if (!plan) {
+        console.warn(`⚠️ Không tìm thấy plan ${payment.plan_id}`);
+        continue;
+      }
+
+      // Hủy gói cũ
+      await this.db.pool.query(
+        `UPDATE subscriptions
+       SET status = 'expired'
+       WHERE user_id = ?
+         AND status = 'active'`,
+        [payment.user_id],
+      );
+
+      // Kích hoạt gói mới
+      const durationDays = Number(plan.duration_days || 30);
+
+      await this.db.pool.query(
+        `INSERT INTO subscriptions
+      (
+        user_id,
+        plan_id,
+        start_date,
+        end_date,
+        status
+      )
+      VALUES
+      (
+        ?,
+        ?,
+        NOW(),
+        DATE_ADD(NOW(), INTERVAL ? DAY),
+        'active'
+      )`,
+        [payment.user_id, plan.plan_id, durationDays],
+      );
+
+      processed++;
+    }
+
+    return {
+      message: "Webhook đã được xử lý",
+      processed,
     };
   }
   async confirmPayment(paymentId, userId) {
