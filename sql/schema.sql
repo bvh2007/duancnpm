@@ -363,6 +363,7 @@ SELECT
 FROM payments
 ORDER BY payment_id DESC
 LIMIT 1;
+
 SELECT
     payment_id,
     user_id,
@@ -377,6 +378,7 @@ SELECT
 FROM payments
 ORDER BY payment_id DESC
 LIMIT 5;
+
 SELECT
     plan_id,
     plan_name,
@@ -385,6 +387,7 @@ SELECT
     is_active
 FROM plans
 ORDER BY plan_id;
+
 SELECT
     payment_id,
     user_id,
@@ -396,6 +399,7 @@ SELECT
 FROM payments
 ORDER BY payment_id DESC
 LIMIT 5;
+
 SELECT
     subscription_id,
     user_id,
@@ -406,13 +410,7 @@ SELECT
 FROM subscriptions
 WHERE user_id = 17
 ORDER BY subscription_id DESC;
-SELECT
-    subscription_id,
-    user_id,
-    plan_id,
-    start_date,
-    end_date,
-    status
-FROM subscriptions
-WHERE user_id = 17
-ORDER BY subscription_id DESC;
+
+ALTER TABLE payments
+ADD COLUMN order_code BIGINT NULL UNIQUE,
+ADD COLUMN checkout_url TEXT NULL;

@@ -28,8 +28,6 @@ const countText = document.getElementById("countText");
 let currentUser = session.user;
 
 const documentList = new DocumentList(docListElement, countText, {
-  downloadUrl: (id) => documentService.downloadUrl(id),
-
   onDelete: async (id) => {
     if (!confirm("Bạn có chắc muốn xóa tài liệu này?")) {
       return;
@@ -44,7 +42,13 @@ const documentList = new DocumentList(docListElement, countText, {
     }
   },
 
-  onDownload: () => {},
+  onDownload: async (id) => {
+    try {
+      await documentService.download(id);
+    } catch (error) {
+      alert(error.message);
+    }
+  },
 
   onDetail: (id) => {
     window.location.href = `document-detail.html?id=${encodeURIComponent(id)}`;
