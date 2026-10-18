@@ -4,12 +4,15 @@ class FeatureController {
   constructor(service) {
     this.service = service;
   }
+
   plans = asyncHandler(async (req, res) =>
     res.json(await this.service.plans()),
   );
+
   detail = asyncHandler(async (req, res) =>
     res.json(await this.service.detail(req.params.id, req.user?.id)),
   );
+
   rate = asyncHandler(async (req, res) =>
     res.json(
       await this.service.rate(
@@ -19,11 +22,13 @@ class FeatureController {
       ),
     ),
   );
+
   favorite = asyncHandler(async (req, res) =>
     res.json({
       favorite: await this.service.favorite(req.params.id, req.user.id),
     }),
   );
+
   comment = asyncHandler(async (req, res) =>
     res.json(
       await this.service.comments(
@@ -34,6 +39,7 @@ class FeatureController {
       ),
     ),
   );
+
   report = asyncHandler(async (req, res) =>
     res.json(
       await this.service.report(
@@ -44,12 +50,16 @@ class FeatureController {
       ),
     ),
   );
+
   me = asyncHandler(async (req, res) =>
     res.json(await this.service.me(req.user.id)),
   );
+
   subscription = asyncHandler(async (req, res) =>
     res.json(await this.service.subscription(req.user.id)),
   );
+
+  // Tạo giao dịch thanh toán
   createPayment = asyncHandler(async (req, res) =>
     res
       .status(201)
@@ -57,8 +67,20 @@ class FeatureController {
         await this.service.createPayment(req.user.id, Number(req.body.planId)),
       ),
   );
+
+  // Xác nhận giao dịch thanh toán
+  confirmPayment = asyncHandler(async (req, res) =>
+    res.json(
+      await this.service.confirmPayment(
+        Number(req.params.paymentId),
+        req.user.id,
+      ),
+    ),
+  );
+
   admin = asyncHandler(async (req, res) =>
     res.json(await this.service.admin(req.user.id)),
   );
 }
+
 module.exports = FeatureController;

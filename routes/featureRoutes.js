@@ -6,6 +6,11 @@ module.exports = function (controller, auth) {
   r.get("/plans", controller.plans);
   r.get("/subscription/me", auth.authenticate, controller.subscription);
   r.post("/payment", auth.authenticate, controller.createPayment);
+  r.post(
+    "/payment/:paymentId/confirm",
+    auth.authenticate,
+    controller.confirmPayment,
+  );
   r.post("/document/:id/rating", auth.authenticate, controller.rate);
   r.post("/document/:id/favorite", auth.authenticate, controller.favorite);
   r.post("/document/:id/comments", auth.authenticate, controller.comment);

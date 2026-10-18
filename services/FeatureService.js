@@ -286,6 +286,116 @@ class FeatureService {
       durationDays: plan.duration_days,
     };
   }
+  async confirmPayment(paymentId, userId) {
+    // 1. Tìm giao dịch
+    const [[payment]] = await this.db.pool.query(
+      `SELECT
+      payment_id,
+      user_id,
+      plan_id,
+      amount,
+      payment_method,
+      transaction_code,
+      \`status\`,
+      paid_at
+    FROM payments
+    WHERE payment_id = ?
+      AND user_id = ?
+    LIMIT 1`,
+      [paymentId, userId],
+    );
+
+    if (!payment) {
+      throw new AppError("Không tìm thấy giao dịch thanh toán", 404);
+    }
+
+    // 2. Nếu đã thanh toán trước đó
+    if (payment.status === "paid") {
+      const [[plan]] = await this.db.pool.query(
+        `SELECT plan_name
+       FROM plans
+       WHERE plan_id = ?
+       LIMIT 1`,
+        [payment.plan_id],
+      );
+
+      return {
+        message: "Giao dịch đã được xác nhận trước đó",
+        paymentId: payment.payment_id,
+        transactionCode: payment.transaction_code,
+        plan: plan?.plan_name || "Pro/VIP",
+        status: "paid",
+      };
+    }
+
+    // 3. Đánh dấu payment đã thanh toán
+    await this.db.pool.query(
+      `UPDATE payments
+     SET \`status\` = 'paid',
+         paid_at = NOW()
+     WHERE payment_id = ?
+       AND user_id = ?`,
+      [paymentId, userId],
+    );
+
+    // 4. Lấy thông tin gói
+    const [[plan]] = await this.db.pool.query(
+      `SELECT
+      plan_id,
+      plan_name,
+      duration_days
+    FROM plans
+    WHERE plan_id = ?
+    LIMIT 1`,
+      [payment.plan_id],
+    );
+
+    if (!plan) {
+      throw new AppError("Không tìm thấy gói thanh toán", 404);
+    }
+
+    // 5. Hủy subscription cũ
+    await this.db.pool.query(
+      `UPDATE subscriptions
+     SET \`status\` = 'expired'
+     WHERE user_id = ?
+       AND \`status\` = 'active'`,
+      [userId],
+    );
+
+    // 6. Tạo subscription mới
+    const durationDays = Number(plan.duration_days || 30);
+
+    await this.db.pool.query(
+      `INSERT INTO subscriptions
+      (
+        user_id,
+        plan_id,
+        start_date,
+        end_date,
+        \`status\`
+      )
+      VALUES
+      (
+        ?,
+        ?,
+        NOW(),
+        DATE_ADD(NOW(), INTERVAL ? DAY),
+        'active'
+      )`,
+      [userId, plan.plan_id, durationDays],
+    );
+
+    // 7. Trả kết quả
+    return {
+      message: "Thanh toán thành công",
+      paymentId: payment.payment_id,
+      transactionCode: payment.transaction_code,
+      plan: plan.plan_name,
+      status: "paid",
+      durationDays,
+    };
+  }
 
   async plans() {
     const [rows] = await this.db.pool.query(`
