@@ -65,7 +65,15 @@ function renderDetail(data) {
           <p class="detail-description">
             ${escapeHtml(documentData.description || "Chưa có mô tả")}
           </p>
+          <p class="detail-document-id">
+  🆔 Mã tài liệu:
+  <b>${escapeHtml(documentData._id || "Không xác định")}</b>
+</p>
 
+<p class="detail-access-level">
+  🔐 Quyền tải:
+  <b>${escapeHtml(documentData.accessLevel || "free").toUpperCase()}</b>
+</p>
         </div>
 
       </div>
