@@ -1,9 +1,5 @@
 import { API_BASE } from "./config.js";
 
-const BANK_ID = "TCB";
-const ACCOUNT_NO = "3379621456";
-const ACCOUNT_NAME = "BUI VAN HOI";
-
 const token = localStorage.getItem("token");
 
 const params = new URLSearchParams(window.location.search);
@@ -13,9 +9,7 @@ const statusEl = document.getElementById("status");
 const infoEl = document.getElementById("payment-info");
 const qrContainer = document.getElementById("qr-container");
 
-// =====================================================
-// 1. TẠO GIAO DỊCH THANH TOÁN
-// =====================================================
+let currentPayment = null;
 
 async function createPayment() {
   try {
@@ -25,12 +19,10 @@ async function createPayment() {
 
     const response = await fetch(`${API_BASE}/features/payment`, {
       method: "POST",
-
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-
       body: JSON.stringify({
         planId,
       }),
@@ -42,6 +34,8 @@ async function createPayment() {
       throw new Error(data.message || "Không thể tạo giao dịch");
     }
 
+    currentPayment = data;
+
     showPayment(data);
   } catch (error) {
     console.error(error);
@@ -50,10 +44,6 @@ async function createPayment() {
     statusEl.style.color = "red";
   }
 }
-
-// =====================================================
-// 2. HIỂN THỊ THÔNG TIN THANH TOÁN + QR
-// =====================================================
 
 function showPayment(payment) {
   statusEl.textContent = "Chờ thanh toán";
@@ -81,62 +71,53 @@ function showPayment(payment) {
     </div>
   `;
 
-  // Tạo nội dung chuyển khoản
-  const addInfo = encodeURIComponent(payment.transactionCode);
-
-  // Tạo URL QR VietQR
-  const qrUrl =
-    `https://img.vietqr.io/image/${BANK_ID}-${ACCOUNT_NO}-compact2.png` +
-    `?amount=${payment.amount}` +
-    `&addInfo=${addInfo}` +
-    `&accountName=${encodeURIComponent(ACCOUNT_NAME)}`;
-
-  // Hiển thị QR + nút xác nhận
   qrContainer.innerHTML = `
     <img
-      src="${qrUrl}"
-      alt="Mã QR thanh toán VietQR"
+      src="${payment.checkoutUrl}"
+      alt="Thanh toán VietQR"
+      style="max-width:360px;width:100%;"
     >
 
+    <p style="margin-top:12px;">
+      Quét mã QR bằng ứng dụng ngân hàng để thanh toán.
+    </p>
+
     <button
-      id="confirmPaymentBtn"
+      id="btn-confirm-payment"
       class="btn btn-primary"
-      style="margin-top: 16px;"
+      style="margin-top:16px;"
     >
       Tôi đã thanh toán
     </button>
   `;
 
-  // Bắt sự kiện nút xác nhận
-  const confirmBtn = document.getElementById("confirmPaymentBtn");
+  const confirmButton = document.getElementById("btn-confirm-payment");
 
-  if (confirmBtn) {
-    confirmBtn.addEventListener("click", () => {
-      // payment.id phải là ID giao dịch
-      confirmPayment(payment.paymentId);
-    });
-  }
+  confirmButton.addEventListener("click", confirmPayment);
 }
 
-// =====================================================
-// 3. XÁC NHẬN THANH TOÁN
-// =====================================================
+async function confirmPayment() {
+  if (!currentPayment) {
+    alert("Chưa có giao dịch thanh toán.");
+    return;
+  }
 
-async function confirmPayment(paymentId) {
+  const confirmed = confirm("Bạn có chắc đã thanh toán giao dịch này không?");
+
+  if (!confirmed) {
+    return;
+  }
+
+  const button = document.getElementById("btn-confirm-payment");
+
   try {
-    if (!paymentId) {
-      throw new Error("Không tìm thấy mã giao dịch để xác nhận");
-    }
-
-    statusEl.textContent = "Đang xác nhận thanh toán...";
-
-    statusEl.style.color = "#2563eb";
+    button.disabled = true;
+    button.textContent = "Đang xác nhận...";
 
     const response = await fetch(
-      `${API_BASE}/features/payment/${paymentId}/confirm`,
+      `${API_BASE}/features/payment/${currentPayment.paymentId}/confirm`,
       {
         method: "POST",
-
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -150,53 +131,28 @@ async function confirmPayment(paymentId) {
       throw new Error(data.message || "Không thể xác nhận thanh toán");
     }
 
-    // ==============================================
-    // THANH TOÁN THÀNH CÔNG
-    // ==============================================
+    statusEl.textContent = "✓ Thanh toán thành công";
 
-    statusEl.textContent = "🎉 Thanh toán thành công!";
+    statusEl.style.color = "green";
 
-    statusEl.style.color = "#16a34a";
-
-    infoEl.innerHTML = `
-      <div>
-        <strong>Gói:</strong>
-        ${data.plan || paymentId}
-      </div>
-
-      <div>
-        <strong>Trạng thái:</strong>
-        Đã thanh toán
-      </div>
-
-      <div
-        style="
-          color: #16a34a;
-          margin-top: 10px;
-        "
-      >
-        Gói của bạn đã được kích hoạt.
+    infoEl.innerHTML += `
+      <div style="margin-top:12px;color:green;">
+        <strong>
+          ✓ Gói ${data.plan || currentPayment.plan}
+          đã được kích hoạt.
+        </strong>
       </div>
     `;
 
-    // Vô hiệu hóa nút sau khi xác nhận
-    const btn = document.getElementById("confirmPaymentBtn");
-
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = "✓ Đã xác nhận";
-    }
+    button.textContent = "Đã thanh toán";
   } catch (error) {
     console.error(error);
 
-    statusEl.textContent = error.message;
+    button.disabled = false;
+    button.textContent = "Tôi đã thanh toán";
 
-    statusEl.style.color = "red";
+    alert(error.message);
   }
 }
-
-// =====================================================
-// 4. BẮT ĐẦU
-// =====================================================
 
 createPayment();
