@@ -351,3 +351,6 @@ WHERE s.user_id = 17
   AND s.status = 'active'
   AND (s.end_date IS NULL OR s.end_date >= NOW())
 ORDER BY s.end_date DESC;
+ALTER TABLE payments
+ADD COLUMN order_code BIGINT NULL UNIQUE,
+ADD COLUMN checkout_url TEXT NULL;
