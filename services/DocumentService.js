@@ -135,14 +135,14 @@ class DocumentService {
       );
     }
 
-    if (
-      !String(d.originalName || "")
-        .toLowerCase()
-        .endsWith(".pdf")
-    ) {
-      throw new AppError("Hiện tại chỉ hỗ trợ xem trực tuyến file PDF", 415);
-    }
+    const fileName = String(d.originalName || "").toLowerCase();
 
+    if (!fileName.endsWith(".pdf") && !fileName.endsWith(".docx")) {
+      throw new AppError(
+        "Hiện tại chỉ hỗ trợ xem trực tuyến PDF và Word (.docx)",
+        415,
+      );
+    }
     return {
       filePath: this.storage.pathOf(d.filePath.replace(/^uploads\//, "")),
     };

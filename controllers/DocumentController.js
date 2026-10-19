@@ -1,4 +1,6 @@
 const asyncHandler = require("../utils/asyncHandler");
+const mammoth = require("mammoth");
+const path = require("path");
 class DocumentController {
   preview = asyncHandler(async (req, res) => {
     const result = await this.service.preparePreview(
@@ -6,10 +8,33 @@ class DocumentController {
       req.user.id,
     );
 
-    res.type("pdf");
-    res.setHeader("Content-Disposition", "inline");
+    const extension = path.extname(result.filePath).toLowerCase();
+
     res.setHeader("Cache-Control", "private, no-store");
-    res.sendFile(result.filePath);
+    res.setHeader("X-Content-Type-Options", "nosniff");
+
+    // Trường hợp 1: Xem file PDF
+    if (extension === ".pdf") {
+      res.type("pdf");
+      res.setHeader("Content-Disposition", "inline");
+      return res.sendFile(result.filePath);
+    }
+
+    // Trường hợp 2: Xem file Word
+    if (extension === ".docx") {
+      const converted = await mammoth.convertToHtml({
+        path: result.filePath,
+      });
+
+      return res.json({
+        type: "docx",
+        html: converted.value,
+      });
+    }
+
+    return res.status(415).json({
+      message: "Định dạng tài liệu chưa được hỗ trợ xem trực tuyến",
+    });
   });
   constructor(service, repo) {
     this.service = service;
