@@ -34,6 +34,7 @@ class DocumentService {
       throw e;
     }
   }
+
   async prepareDownload(id, userId, ip) {
     // 1. Lấy thông tin tài liệu
     const d = await this.repo.findById(id);
@@ -91,10 +92,59 @@ class DocumentService {
     }
 
     return {
-      filePath: this.storage.pathOf(
-        downloaded.filePath.replace(/^uploads\//, ""),
-      ),
-      originalName: downloaded.originalName,
+      filePath: this.storage.pathOf(d.filePath.replace(/^uploads\//, "")),
+    };
+  }
+  async preparePreview(id, userId) {
+    const d = await this.repo.findById(id);
+
+    if (!d) {
+      throw new AppError("Không tìm thấy tài liệu", 404);
+    }
+
+    let plan = "Free";
+
+    if (userId) {
+      const [[subscription]] = await this.db.pool.query(
+        `SELECT p.plan_name AS plan
+         FROM subscriptions s
+         JOIN plans p ON p.plan_id = s.plan_id
+         WHERE s.user_id = ?
+           AND s.status = 'active'
+           AND (s.end_date IS NULL OR s.end_date >= NOW())
+         ORDER BY s.end_date DESC
+         LIMIT 1`,
+        [userId],
+      );
+
+      if (subscription) plan = subscription.plan;
+    }
+
+    const accessLevel = String(d.accessLevel || "free").toLowerCase();
+    const currentPlan = String(plan).toLowerCase();
+
+    const allowed =
+      accessLevel === "free" ||
+      (accessLevel === "pro" && ["pro", "vip"].includes(currentPlan)) ||
+      (accessLevel === "vip" && currentPlan === "vip");
+
+    if (!allowed) {
+      throw new AppError(
+        `Tài liệu này yêu cầu gói ${accessLevel.toUpperCase()}. Gói hiện tại của bạn là ${plan}.`,
+        403,
+      );
+    }
+
+    if (
+      !String(d.originalName || "")
+        .toLowerCase()
+        .endsWith(".pdf")
+    ) {
+      throw new AppError("Hiện tại chỉ hỗ trợ xem trực tuyến file PDF", 415);
+    }
+
+    return {
+      filePath: this.storage.pathOf(d.filePath.replace(/^uploads\//, "")),
     };
   }
   async remove(id, userId) {
