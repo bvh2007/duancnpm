@@ -4,3 +4,21 @@ uploads/*
 !uploads/.gitkeep
 test-payment.js
 test-payment.js
+# Thông tin bí mật
+.env
+.env.*
+!.env.example
+
+# Thư viện
+node_modules/
+
+# File người dùng tải lên
+uploads/
+
+# Log
+*.log
+npm-debug.log*
+
+# File hệ thống
+.DS_Store
+Thumbs.db

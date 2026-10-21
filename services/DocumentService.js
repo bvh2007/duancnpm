@@ -144,7 +144,7 @@ class DocumentService {
       );
     }
     return {
-      filePath: this.storage.pathOf(d.filePath.replace(/^uploads\//, "")),
+      filePath: this.storage.pathOf(d.filePath.replace(/^uploads[\\/]/, "")),
     };
   }
   async remove(id, userId) {
