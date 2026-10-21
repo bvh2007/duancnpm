@@ -105,6 +105,13 @@ function renderDetail(data) {
       </div>
 
       <div class="detail-actions">
+      <button
+  class="btn btn-outline"
+  id="previewBtn"
+  type="button"
+>
+  👁 Xem online
+</button>
 
         <button
   class="btn btn-primary"
@@ -122,6 +129,10 @@ function renderDetail(data) {
       </div>
 
       <div class="rating-box">
+      <div id="previewContainer" hidden>
+  <h3>📖 Xem trước tài liệu</h3>
+  <div id="previewContent"></div>
+</div>
 
         <h3>⭐ Đánh giá tài liệu</h3>
 
@@ -251,8 +262,80 @@ async function loadDetail() {
     `;
   }
 }
+async function openPreview(documentId) {
+  const container = document.getElementById("previewContainer");
+  const content = document.getElementById("previewContent");
 
+  container.hidden = false;
+  content.textContent = "Đang tải tài liệu...";
+
+  try {
+    const token = session.token;
+
+    if (!token) {
+      throw new Error("Bạn cần đăng nhập để xem tài liệu.");
+    }
+
+    const response = await fetch(
+      `${API_BASE}/documents/${encodeURIComponent(documentId)}/preview`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Không thể xem tài liệu.");
+    }
+
+    const contentType = response.headers.get("content-type") || "";
+
+    if (contentType.includes("application/pdf")) {
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+
+      const iframe = document.createElement("iframe");
+      iframe.src = url;
+      iframe.title = "Xem trước tài liệu PDF";
+      iframe.style.width = "100%";
+      iframe.style.height = "650px";
+      iframe.style.border = "none";
+
+      content.replaceChildren(iframe);
+
+      iframe.addEventListener("load", () => URL.revokeObjectURL(url), {
+        once: true,
+      });
+    } else if (contentType.includes("application/json")) {
+      const data = await response.json();
+
+      if (data.type !== "docx") {
+        throw new Error("Định dạng xem trước không hợp lệ.");
+      }
+
+      // Hiển thị HTML chuyển đổi từ Word trong iframe cách ly.
+      const iframe = document.createElement("iframe");
+      iframe.title = "Xem trước tài liệu Word";
+      iframe.setAttribute("sandbox", "");
+      iframe.style.width = "100%";
+      iframe.style.height = "650px";
+      iframe.style.border = "1px solid #ddd";
+      iframe.srcdoc = data.html || "";
+
+      content.replaceChildren(iframe);
+    } else {
+      throw new Error("Định dạng tài liệu chưa được hỗ trợ.");
+    }
+  } catch (error) {
+    content.textContent = error.message;
+  }
+}
 function bindEvents(documentId) {
+  document.getElementById("previewBtn")?.addEventListener("click", async () => {
+    await openPreview(documentId);
+  });
   document
     .getElementById("downloadBtn")
     ?.addEventListener("click", async () => {
