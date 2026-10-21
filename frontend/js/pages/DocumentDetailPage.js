@@ -2,10 +2,12 @@ import { API_BASE } from "../config.js";
 import SessionStore from "../services/SessionStore.js";
 import ApiClient from "../services/ApiClient.js";
 import FeatureStore from "../services/FeatureStore.js";
+import DocumentService from "../services/DocumentService.js";
 
 const session = new SessionStore();
 const api = new ApiClient(API_BASE, session);
 const features = new FeatureStore(api);
+const documentService = new DocumentService(api);
 
 const detailContent = document.getElementById("detailContent");
 
@@ -104,13 +106,12 @@ function renderDetail(data) {
 
       <div class="detail-actions">
 
-        <a
-          class="btn btn-primary"
-          href="${API_BASE}/documents/${id}/download"
-        >
-          ⬇ Tải tài liệu
-        </a>
-
+        <button
+  class="btn btn-primary"
+  id="downloadBtn"
+>
+  ⬇ Tải tài liệu
+</button>
         <button
           class="btn btn-outline"
           id="favoriteBtn"
@@ -252,6 +253,15 @@ async function loadDetail() {
 }
 
 function bindEvents(documentId) {
+  document
+    .getElementById("downloadBtn")
+    ?.addEventListener("click", async () => {
+      try {
+        await documentService.download(documentId);
+      } catch (error) {
+        alert(error.message);
+      }
+    });
   document.querySelectorAll("[data-rating]").forEach((button) => {
     button.addEventListener("click", async () => {
       if (!session.user) {
