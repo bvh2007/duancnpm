@@ -1,7 +1,7 @@
 const express = require("express");
 module.exports = function (controller, auth) {
   const r = express.Router();
-  r.get("/document/:id", controller.detail);
+  r.get("/document/:id", auth.authenticate, controller.detail);
   r.get("/me", auth.authenticate, controller.me);
   r.get("/plans", controller.plans);
   r.get("/subscription/me", auth.authenticate, controller.subscription);
