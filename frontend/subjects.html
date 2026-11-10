@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Môn học - TàiLiệuSV</title>
+
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="css/subjects.css" />
+  </head>
+
+  <body>
+    <header class="navbar">
+      <div class="container navbar-inner">
+        <a class="brand" href="index.html">
+          <span class="brand-mark">T</span>
+          <span>TàiLiệu<span>SV</span></span>
+        </a>
+
+        <nav class="main-nav">
+          <a href="index.html"> Trang chủ </a>
+
+          <a href="documents.html"> Tài liệu </a>
+
+          <a href="subjects.html" class="active"> Môn học </a>
+
+          <a href="index.html#popular"> Nổi bật </a>
+        </nav>
+
+        <div class="nav-actions">
+          <a href="profile.html" class="btn btn-outline btn-sm"> Hồ sơ </a>
+        </div>
+      </div>
+    </header>
+
+    <main class="subjects-page">
+      <div class="container">
+        <div class="page-heading">
+          <span class="eyebrow"> KHÁM PHÁ </span>
+
+          <h1>Khám phá theo môn học</h1>
+
+          <p>Tìm tài liệu theo từng môn học.</p>
+        </div>
+
+        <div id="subjectsGrid" class="subjects-grid">
+          <div class="empty">Đang tải môn học...</div>
+        </div>
+      </div>
+    </main>
+
+    <script type="module" src="js/pages/SubjectsPage.js"></script>
+  </body>
+</html>

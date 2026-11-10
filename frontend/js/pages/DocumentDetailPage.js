@@ -1,0 +1,403 @@
+import { API_BASE } from "../config.js";
+import SessionStore from "../services/SessionStore.js";
+import ApiClient from "../services/ApiClient.js";
+import FeatureStore from "../services/FeatureStore.js";
+import DocumentService from "../services/DocumentService.js";
+
+const session = new SessionStore();
+const api = new ApiClient(API_BASE, session);
+const features = new FeatureStore(api);
+const documentService = new DocumentService(api);
+
+const detailContent = document.getElementById("detailContent");
+
+const params = new URLSearchParams(window.location.search);
+const id = params.get("id");
+
+function escapeHtml(value = "") {
+  return String(value).replace(
+    /[&<>'"]/g,
+    (char) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "'": "&#39;",
+        '"': "&quot;",
+      })[char],
+  );
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+
+  return new Date(value).toLocaleDateString("vi-VN");
+}
+
+function renderDetail(data) {
+  const documentData = data.document || data;
+
+  const rating = data.rating || {
+    avg: 0,
+    count: 0,
+    mine: 0,
+  };
+
+  const comments = data.comments || [];
+
+  detailContent.innerHTML = `
+    <article class="detail-box">
+
+      <div class="detail-head">
+
+        <div class="detail-file-icon">
+          📄
+        </div>
+
+        <div>
+
+          <span class="tag">
+            ${escapeHtml(documentData.type || "Tài liệu")}
+          </span>
+
+          <h1 class="detail-title">
+            ${escapeHtml(documentData.title || "Không có tiêu đề")}
+          </h1>
+
+          <p class="detail-description">
+            ${escapeHtml(documentData.description || "Chưa có mô tả")}
+          </p>
+          <p class="detail-document-id">
+  🆔 Mã tài liệu:
+  <b>${escapeHtml(documentData._id || "Không xác định")}</b>
+</p>
+
+<p class="detail-access-level">
+  🔐 Quyền tải:
+  <b>${escapeHtml(documentData.accessLevel || "free").toUpperCase()}</b>
+</p>
+        </div>
+
+      </div>
+
+      <div class="detail-meta">
+
+        <span>
+          📚 Môn:
+          <b>${escapeHtml(documentData.subject || "Chưa cập nhật")}</b>
+        </span>
+
+        <span>
+          👤 Người đăng:
+          <b>
+            ${escapeHtml(documentData.uploader?.name || "Ẩn danh")}
+          </b>
+        </span>
+
+        <span>
+          ⬇ ${documentData.downloads || 0} lượt tải
+        </span>
+
+        <span>
+          📅 ${formatDate(documentData.createdAt)}
+        </span>
+
+      </div>
+
+      <div class="detail-actions">
+      <button
+  class="btn btn-outline"
+  id="previewBtn"
+  type="button"
+>
+  👁 Xem online
+</button>
+
+        <button
+  class="btn btn-primary"
+  id="downloadBtn"
+>
+  ⬇ Tải tài liệu
+</button>
+        <button
+          class="btn btn-outline"
+          id="favoriteBtn"
+        >
+          ❤️ Yêu thích
+        </button>
+
+      </div>
+
+      <div class="rating-box">
+      <div id="previewContainer" hidden>
+  <h3>📖 Xem trước tài liệu</h3>
+  <div id="previewContent"></div>
+</div>
+
+        <h3>⭐ Đánh giá tài liệu</h3>
+
+        <p>
+          Điểm trung bình:
+          <b>
+            ${rating.avg ? rating.avg.toFixed(1) : "Chưa có"}
+          </b>
+          (${rating.count || 0} lượt đánh giá)
+        </p>
+
+        <div class="rating-stars">
+
+          ${[1, 2, 3, 4, 5]
+            .map(
+              (number) => `
+            <button
+              data-rating="${number}"
+              title="Đánh giá ${number} sao"
+            >
+              ${number <= (rating.mine || 0) ? "★" : "☆"}
+            </button>
+          `,
+            )
+            .join("")}
+
+        </div>
+
+      </div>
+
+      <div class="comments-section">
+
+        <h2>
+          💬 Bình luận (${comments.length})
+        </h2>
+
+        <div class="comments-list">
+
+          ${
+            comments.length
+              ? comments
+                  .map(
+                    (comment) => `
+                  <div class="comment">
+
+                    <strong>
+                      ${escapeHtml(comment.user || "Ẩn danh")}
+                    </strong>
+
+                    <p>
+                      ${escapeHtml(comment.text || comment.content || "")}
+                    </p>
+
+                    <small>
+                      ${formatDate(comment.at || comment.createdAt)}
+                    </small>
+
+                  </div>
+                `,
+                  )
+                  .join("")
+              : `
+                <p class="muted">
+                  Chưa có bình luận.
+                </p>
+              `
+          }
+
+        </div>
+
+        ${
+          session.user
+            ? `
+              <form class="comment-form" id="commentForm">
+
+                <input
+                  id="commentInput"
+                  type="text"
+                  placeholder="Viết bình luận..."
+                  required
+                >
+
+                <button class="btn btn-primary">
+                  Gửi
+                </button>
+
+              </form>
+            `
+            : `
+              <p class="muted">
+                Đăng nhập để bình luận.
+              </p>
+            `
+        }
+
+      </div>
+
+    </article>
+  `;
+
+  bindEvents(id);
+}
+
+async function loadDetail() {
+  if (!id) {
+    detailContent.innerHTML = `
+      <div class="detail-error">
+        Không tìm thấy mã tài liệu.
+      </div>
+    `;
+    return;
+  }
+
+  try {
+    const data = await features.loadDetail(id);
+
+    renderDetail(data);
+  } catch (error) {
+    console.error(error);
+
+    detailContent.innerHTML = `
+      <div class="detail-error">
+        Không thể tải tài liệu.
+        <br>
+        ${escapeHtml(error.message)}
+      </div>
+    `;
+  }
+}
+async function openPreview(documentId) {
+  const container = document.getElementById("previewContainer");
+  const content = document.getElementById("previewContent");
+
+  container.hidden = false;
+  content.textContent = "Đang tải tài liệu...";
+
+  try {
+    const token = session.token;
+
+    if (!token) {
+      throw new Error("Bạn cần đăng nhập để xem tài liệu.");
+    }
+
+    const response = await fetch(
+      `${API_BASE}/documents/${encodeURIComponent(documentId)}/preview`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Không thể xem tài liệu.");
+    }
+
+    const contentType = response.headers.get("content-type") || "";
+
+    if (contentType.includes("application/pdf")) {
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+
+      const iframe = document.createElement("iframe");
+      iframe.src = url;
+      iframe.title = "Xem trước tài liệu PDF";
+      iframe.style.width = "100%";
+      iframe.style.height = "650px";
+      iframe.style.border = "none";
+
+      content.replaceChildren(iframe);
+
+      iframe.addEventListener("load", () => URL.revokeObjectURL(url), {
+        once: true,
+      });
+    } else if (contentType.includes("application/json")) {
+      const data = await response.json();
+
+      if (data.type !== "docx") {
+        throw new Error("Định dạng xem trước không hợp lệ.");
+      }
+
+      // Hiển thị HTML chuyển đổi từ Word trong iframe cách ly.
+      const iframe = document.createElement("iframe");
+      iframe.title = "Xem trước tài liệu Word";
+      iframe.setAttribute("sandbox", "");
+      iframe.style.width = "100%";
+      iframe.style.height = "650px";
+      iframe.style.border = "1px solid #ddd";
+      iframe.srcdoc = data.html || "";
+
+      content.replaceChildren(iframe);
+    } else {
+      throw new Error("Định dạng tài liệu chưa được hỗ trợ.");
+    }
+  } catch (error) {
+    content.textContent = error.message;
+  }
+}
+function bindEvents(documentId) {
+  document.getElementById("previewBtn")?.addEventListener("click", async () => {
+    await openPreview(documentId);
+  });
+  document
+    .getElementById("downloadBtn")
+    ?.addEventListener("click", async () => {
+      try {
+        await documentService.download(documentId);
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+  document.querySelectorAll("[data-rating]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      if (!session.user) {
+        alert("Bạn cần đăng nhập để đánh giá.");
+        return;
+      }
+
+      try {
+        await features.rate(documentId, Number(button.dataset.rating));
+
+        await loadDetail();
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+  });
+
+  document
+    .getElementById("favoriteBtn")
+    ?.addEventListener("click", async () => {
+      if (!session.user) {
+        alert("Bạn cần đăng nhập để lưu yêu thích.");
+        return;
+      }
+
+      try {
+        const result = await features.toggleFavorite(documentId);
+
+        alert(result ? "Đã thêm vào yêu thích." : "Đã bỏ khỏi yêu thích.");
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+
+  document
+    .getElementById("commentForm")
+    ?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const input = document.getElementById("commentInput");
+
+      const content = input.value.trim();
+
+      if (!content) return;
+
+      try {
+        await features.addComment(documentId, content);
+
+        await loadDetail();
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+}
+
+loadDetail();
