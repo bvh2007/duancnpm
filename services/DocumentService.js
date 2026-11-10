@@ -56,7 +56,8 @@ class DocumentService {
        JOIN plans p ON p.plan_id = s.plan_id
        WHERE s.user_id = ?
          AND s.status = 'active'
-         AND (s.end_date IS NULL OR s.end_date >= NOW())
+         AND s.start_date <= NOW()
+         AND (s.end_date IS NULL OR s.end_date > NOW())
        ORDER BY s.end_date DESC
        LIMIT 1`,
         [userId],
@@ -111,7 +112,8 @@ class DocumentService {
          JOIN plans p ON p.plan_id = s.plan_id
          WHERE s.user_id = ?
            AND s.status = 'active'
-           AND (s.end_date IS NULL OR s.end_date >= NOW())
+           AND s.start_date <= NOW()
+           AND (s.end_date IS NULL OR s.end_date > NOW())
          ORDER BY s.end_date DESC
          LIMIT 1`,
         [userId],

@@ -1,5 +1,8 @@
 const AppError = require("../utils/AppError");
 
+const planRank = (name) =>
+  ({ free: 0, pro: 1, vip: 2 })[String(name).toLowerCase()];
+
 class FeatureService {
   constructor(db) {
     this.db = db;
@@ -221,7 +224,8 @@ class FeatureService {
       JOIN plans p ON p.plan_id = s.plan_id
       WHERE s.user_id = ?
         AND s.status = 'active'
-        AND (s.end_date IS NULL OR s.end_date >= NOW())
+        AND s.start_date <= NOW()
+        AND (s.end_date IS NULL OR s.end_date > NOW())
       ORDER BY s.end_date DESC
       LIMIT 1`,
       [userId],
@@ -266,6 +270,29 @@ class FeatureService {
 
     if (amount <= 0) {
       throw new AppError("Không thể thanh toán gói miễn phí", 400);
+    }
+
+    const [[currentPlan]] = await this.db.pool.query(
+      `SELECT p.plan_name AS plan, s.end_date AS endDate
+       FROM subscriptions s
+       JOIN plans p ON p.plan_id = s.plan_id
+       WHERE s.user_id = ?
+         AND s.status = 'active'
+         AND s.start_date <= NOW()
+         AND (s.end_date IS NULL OR s.end_date > NOW())
+       ORDER BY s.end_date DESC
+       LIMIT 1`,
+      [userId],
+    );
+
+    if (
+      currentPlan &&
+      planRank(plan.plan_name) < planRank(currentPlan.plan)
+    ) {
+      throw new AppError(
+        `Gói ${currentPlan.plan} còn hạn đến ${currentPlan.endDate}. Bạn chỉ có thể hạ gói sau ngày hết hạn.`,
+        409,
+      );
     }
 
     // Mã đơn hàng duy nhất
@@ -322,7 +349,7 @@ class FeatureService {
       amount,
       paymentMethod: "vietqr",
       status: "pending",
-      durationDays: plan.duration_days,
+      durationDays: Number(plan.duration_days) || 30,
       checkoutUrl,
     };
     // Lưu Quick Link vào database
@@ -404,67 +431,8 @@ class FeatureService {
         continue;
       }
 
-      // Đánh dấu đã thanh toán
-      await this.db.pool.query(
-        `UPDATE payments
-       SET
-         status = 'paid',
-         paid_at = NOW()
-       WHERE payment_id = ?
-         AND status = 'pending'`,
-        [payment.payment_id],
-      );
-
-      // Lấy thông tin gói
-      const [[plan]] = await this.db.pool.query(
-        `SELECT
-        plan_id,
-        plan_name,
-        duration_days
-       FROM plans
-       WHERE plan_id = ?
-       LIMIT 1`,
-        [payment.plan_id],
-      );
-
-      if (!plan) {
-        console.warn(`⚠️ Không tìm thấy plan ${payment.plan_id}`);
-        continue;
-      }
-
-      // Hủy gói cũ
-      await this.db.pool.query(
-        `UPDATE subscriptions
-       SET status = 'expired'
-       WHERE user_id = ?
-         AND status = 'active'`,
-        [payment.user_id],
-      );
-
-      // Kích hoạt gói mới
-      const durationDays = Number(plan.duration_days || 30);
-
-      await this.db.pool.query(
-        `INSERT INTO subscriptions
-      (
-        user_id,
-        plan_id,
-        start_date,
-        end_date,
-        status
-      )
-      VALUES
-      (
-        ?,
-        ?,
-        NOW(),
-        DATE_ADD(NOW(), INTERVAL ? DAY),
-        'active'
-      )`,
-        [payment.user_id, plan.plan_id, durationDays],
-      );
-
-      processed++;
+      const result = await this.activatePayment(payment.payment_id);
+      if (!result.alreadyPaid) processed++;
     }
 
     return {
@@ -472,115 +440,145 @@ class FeatureService {
       processed,
     };
   }
-  async confirmPayment(paymentId, userId) {
-    // 1. Tìm giao dịch
-    const [[payment]] = await this.db.pool.query(
-      `SELECT
-      payment_id,
-      user_id,
-      plan_id,
-      amount,
-      payment_method,
-      transaction_code,
-      \`status\`,
-      paid_at
-    FROM payments
-    WHERE payment_id = ?
-      AND user_id = ?
-    LIMIT 1`,
-      [paymentId, userId],
-    );
+  async activatePayment(paymentId, userId) {
+    const connection = await this.db.pool.getConnection();
+    try {
+      await connection.beginTransaction();
 
-    if (!payment) {
-      throw new AppError("Không tìm thấy giao dịch thanh toán", 404);
-    }
+      const userFilter = userId ? "AND user_id = ?" : "";
+      const paymentParams = userId ? [paymentId, userId] : [paymentId];
+      const [[payment]] = await connection.query(
+        `SELECT payment_id, user_id, plan_id, transaction_code, status
+         FROM payments
+         WHERE payment_id = ? ${userFilter}
+         LIMIT 1
+         FOR UPDATE`,
+        paymentParams,
+      );
 
-    // 2. Nếu đã thanh toán trước đó
-    if (payment.status === "paid") {
-      const [[plan]] = await this.db.pool.query(
-        `SELECT plan_name
-       FROM plans
-       WHERE plan_id = ?
-       LIMIT 1`,
+      if (!payment) {
+        throw new AppError("Không tìm thấy giao dịch thanh toán", 404);
+      }
+
+      const [[plan]] = await connection.query(
+        `SELECT plan_id, plan_name, duration_days
+         FROM plans
+         WHERE plan_id = ?
+         LIMIT 1`,
         [payment.plan_id],
       );
 
+      if (!plan) {
+        throw new AppError("Không tìm thấy gói thanh toán", 404);
+      }
+
+      if (payment.status === "paid") {
+        await connection.commit();
+        return {
+          message: "Giao dịch đã được xác nhận trước đó",
+          paymentId: payment.payment_id,
+          transactionCode: payment.transaction_code,
+          plan: plan.plan_name,
+          status: "paid",
+          alreadyPaid: true,
+        };
+      }
+
+      if (payment.status !== "pending") {
+        throw new AppError("Giao dịch không ở trạng thái chờ thanh toán", 409);
+      }
+
+      await connection.query(
+        "SELECT user_id FROM users WHERE user_id = ? FOR UPDATE",
+        [payment.user_id],
+      );
+
+      const [[current]] = await connection.query(
+        `SELECT s.subscription_id, s.plan_id, s.end_date, p.plan_name AS plan
+         FROM subscriptions s
+         JOIN plans p ON p.plan_id = s.plan_id
+         WHERE s.user_id = ?
+           AND s.status = 'active'
+           AND s.start_date <= NOW()
+           AND (s.end_date IS NULL OR s.end_date > NOW())
+         ORDER BY s.end_date DESC
+         LIMIT 1
+         FOR UPDATE`,
+        [payment.user_id],
+      );
+
+      if (
+        current &&
+        planRank(plan.plan_name) < planRank(current.plan)
+      ) {
+        throw new AppError(
+          `Gói ${current.plan} còn hạn đến ${current.end_date}. Bạn chỉ có thể hạ gói sau ngày hết hạn.`,
+          409,
+        );
+      }
+
+      const durationDays = Number(plan.duration_days) || 30;
+
+      if (current?.plan_id === plan.plan_id) {
+        await connection.query(
+          `UPDATE subscriptions
+           SET end_date = DATE_ADD(GREATEST(COALESCE(end_date, NOW()), NOW()), INTERVAL ? DAY)
+           WHERE subscription_id = ?`,
+          [durationDays, current.subscription_id],
+        );
+      } else {
+        await connection.query(
+          `UPDATE subscriptions
+           SET status = 'expired'
+           WHERE user_id = ? AND status = 'active'`,
+          [payment.user_id],
+        );
+
+        await connection.query(
+          `INSERT INTO subscriptions
+            (user_id, plan_id, start_date, end_date, status)
+           VALUES (?, ?, NOW(), DATE_ADD(NOW(), INTERVAL ? DAY), 'active')`,
+          [payment.user_id, plan.plan_id, durationDays],
+        );
+      }
+
+      await connection.query(
+        `UPDATE payments
+         SET status = 'paid', paid_at = NOW()
+         WHERE payment_id = ? AND status = 'pending'`,
+        [payment.payment_id],
+      );
+
+      const [[subscription]] = await connection.query(
+        `SELECT end_date AS endDate
+         FROM subscriptions
+         WHERE user_id = ? AND plan_id = ? AND status = 'active'
+         ORDER BY end_date DESC
+         LIMIT 1`,
+        [payment.user_id, plan.plan_id],
+      );
+
+      await connection.commit();
       return {
-        message: "Giao dịch đã được xác nhận trước đó",
+        message: "Thanh toán thành công",
         paymentId: payment.payment_id,
         transactionCode: payment.transaction_code,
-        plan: plan?.plan_name || "Pro/VIP",
+        plan: plan.plan_name,
         status: "paid",
+        durationDays,
+        endDate: subscription?.endDate || null,
+        alreadyPaid: false,
       };
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
     }
+  }
 
-    // 3. Đánh dấu payment đã thanh toán
-    await this.db.pool.query(
-      `UPDATE payments
-     SET \`status\` = 'paid',
-         paid_at = NOW()
-     WHERE payment_id = ?
-       AND user_id = ?`,
-      [paymentId, userId],
-    );
-
-    // 4. Lấy thông tin gói
-    const [[plan]] = await this.db.pool.query(
-      `SELECT
-      plan_id,
-      plan_name,
-      duration_days
-    FROM plans
-    WHERE plan_id = ?
-    LIMIT 1`,
-      [payment.plan_id],
-    );
-
-    if (!plan) {
-      throw new AppError("Không tìm thấy gói thanh toán", 404);
-    }
-
-    // 5. Hủy subscription cũ
-    await this.db.pool.query(
-      `UPDATE subscriptions
-     SET \`status\` = 'expired'
-     WHERE user_id = ?
-       AND \`status\` = 'active'`,
-      [userId],
-    );
-
-    // 6. Tạo subscription mới
-    const durationDays = Number(plan.duration_days || 30);
-
-    await this.db.pool.query(
-      `INSERT INTO subscriptions
-      (
-        user_id,
-        plan_id,
-        start_date,
-        end_date,
-        \`status\`
-      )
-      VALUES
-      (
-        ?,
-        ?,
-        NOW(),
-        DATE_ADD(NOW(), INTERVAL ? DAY),
-        'active'
-      )`,
-      [userId, plan.plan_id, durationDays],
-    );
-
-    // 7. Trả kết quả
-    return {
-      message: "Thanh toán thành công",
-      paymentId: payment.payment_id,
-      transactionCode: payment.transaction_code,
-      plan: plan.plan_name,
-      status: "paid",
-      durationDays,
-    };
+  async confirmPayment(paymentId, userId) {
+    return this.activatePayment(paymentId, userId);
   }
 
   async plans() {
@@ -589,7 +587,10 @@ class FeatureService {
         plan_id AS id,
         plan_name AS name,
         price,
-        duration_days AS durationDays,
+        CASE
+          WHEN plan_name = 'Free' THEN 0
+          ELSE COALESCE(NULLIF(duration_days, 0), 30)
+        END AS durationDays,
         description
       FROM plans
       WHERE is_active = TRUE

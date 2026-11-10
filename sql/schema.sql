@@ -223,12 +223,13 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 INSERT IGNORE INTO roles(role_id, role_name, description) VALUES
 (1,'student','Sinh viên'),(2,'moderator','Người duyệt nội dung'),(3,'admin','Quản trị viên');
-INSERT IGNORE INTO plans
+INSERT INTO plans
 (plan_id, plan_name, price, duration_days, description)
 VALUES
 (1, 'Free', 0, 0, 'Gói miễn phí'),
 (2, 'Pro', 49000, 30, 'Gói Pro dành cho sinh viên'),
-(3, 'VIP', 99000, 30, 'Gói VIP với đầy đủ quyền lợi');
+(3, 'VIP', 99000, 30, 'Gói VIP với đầy đủ quyền lợi')
+ON DUPLICATE KEY UPDATE duration_days = VALUES(duration_days);
 
 INSERT IGNORE INTO faculties(faculty_id,name,slug) VALUES
 (1,'Công nghệ thông tin','cong-nghe-thong-tin'),
