@@ -1,3 +1,5 @@
-// Nếu mở bằng Live Server (cổng 5500) thì gọi sang backend ở cổng 3000
+// Use the same origin in production; localhost is used only with Live Server.
+const isLiveServer = ["5500", "5501"].includes(window.location.port);
+const apiBaseUrl = isLiveServer ? "http://localhost:3000/api" : "/api";
 
-export const API_BASE = "/api";
+export const API_BASE = apiBaseUrl;

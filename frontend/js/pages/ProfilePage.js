@@ -40,20 +40,49 @@ function getPlanClass(name) {
   return "free";
 }
 
-function renderPlanCard(plan, currentPlan) {
+function planRank(name) {
+  return { free: 0, pro: 1, vip: 2 }[String(name).toLowerCase()] ?? -1;
+}
+
+function formatDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? ""
+    : date.toLocaleDateString("vi-VN");
+}
+
+function renderPlanCard(plan, subscription) {
+  const currentPlan = subscription?.plan || "Free";
   const isCurrent =
     String(plan.name).toLowerCase() === String(currentPlan).toLowerCase();
+  const expiry = subscription?.endDate ? new Date(subscription.endDate) : null;
+  const hasActiveSubscription =
+    subscription?.status === "active" &&
+    expiry !== null &&
+    expiry.getTime() > Date.now();
+  const isDowngrade =
+    hasActiveSubscription &&
+    planRank(plan.name) < planRank(currentPlan);
 
   const planClass = getPlanClass(plan.name);
 
   let buttonHtml = "";
 
-  if (isCurrent) {
+  if (isDowngrade) {
     buttonHtml = `
-      <span class="current-label">
-        ✓ Gói hiện tại
-      </span>
+      <button class="plan-btn" disabled>
+        Hạ gói sau ${formatDate(subscription.endDate)}
+      </button>
     `;
+  } else if (isCurrent && Number(plan.price) > 0) {
+    buttonHtml = `
+      <button class="plan-btn" data-plan-id="${plan.id}">
+        Gia hạn ${escapeHtml(plan.name)}
+      </button>
+    `;
+  } else if (isCurrent) {
+    buttonHtml = `<span class="current-label">✓ Gói hiện tại</span>`;
   } else if (Number(plan.price) === 0) {
     buttonHtml = `
       <button class="plan-btn" disabled>
@@ -89,6 +118,12 @@ function renderPlanCard(plan, currentPlan) {
       <div class="plan-duration">
         ${durationText}
       </div>
+
+      ${isCurrent && hasActiveSubscription ? `
+        <div class="plan-duration">
+          Có hiệu lực đến ${formatDate(subscription.endDate)}
+        </div>
+      ` : ""}
 
       <div class="plan-description">
         ${escapeHtml(plan.description || "")}
@@ -172,7 +207,7 @@ async function loadProfile() {
         </p>
 
         <div class="plan-list">
-          ${plans.map((plan) => renderPlanCard(plan, currentPlan)).join("")}
+          ${plans.map((plan) => renderPlanCard(plan, subscription)).join("")}
         </div>
       </section>
     `;
