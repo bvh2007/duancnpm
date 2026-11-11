@@ -4,11 +4,18 @@ export default class DocumentList {
   constructor(
     container,
     countElement,
-    { onDelete, onDownload, onDetail, onFavorite, onReport },
+    { onDelete, onDownload, onDetail, onFavorite, onReport, onCollection },
   ) {
     this.container = container;
     this.countElement = countElement;
-    this.handlers = { onDelete, onDownload, onDetail, onFavorite, onReport };
+    this.handlers = {
+      onDelete,
+      onDownload,
+      onDetail,
+      onFavorite,
+      onReport,
+      onCollection,
+    };
     this.container.addEventListener("click", (e) => {
       const el = e.target.closest("[data-action]");
       if (!el) return;
@@ -19,6 +26,7 @@ export default class DocumentList {
       if (action === "detail") onDetail(id);
       if (action === "favorite") onFavorite(id);
       if (action === "report") onReport(id);
+      if (action === "collection") onCollection(id);
     });
   }
   render(docs, currentUser, featureStore) {
@@ -56,6 +64,7 @@ export default class DocumentList {
       <div class="card-actions"><button class="btn btn-primary btn-sm" data-action="detail" data-id="${d._id}">Xem chi tiết</button><button class="btn btn-soft btn-sm" data-action="download" data-id="${d._id}">
   Tải xuống
 </button>${isOwner ? `<button class="btn btn-danger btn-sm" data-action="delete" data-id="${d._id}">Xóa</button>` : ""}</div>
+      <button class="collection-save-link" data-action="collection" data-id="${d._id}">📚 Lưu vào bộ sưu tập</button>
       <button class="report-link" data-action="report" data-id="${d._id}">🚩 Báo cáo tài liệu</button>
     </article>`;
   }

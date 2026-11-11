@@ -54,6 +54,14 @@ const documentList = new DocumentList(docListElement, countText, {
     window.location.href = `document-detail.html?id=${encodeURIComponent(id)}`;
   },
 
+  onCollection: (id) => {
+    if (!currentUser) {
+      window.location.href = "index.html";
+      return;
+    }
+    window.location.href = `collections.html?documentId=${encodeURIComponent(id)}`;
+  },
+
   onFavorite: async (id) => {
     try {
       await featureStore.toggleFavorite(id);

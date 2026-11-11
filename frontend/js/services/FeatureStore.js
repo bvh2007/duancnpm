@@ -104,6 +104,42 @@ export default class FeatureStore {
     return this.api.post(`/features/document/${id}/report`, { reason });
   }
 
+  async collections() {
+    return this.api.get("/features/collections");
+  }
+
+  async collection(id) {
+    return this.api.get(`/features/collections/${encodeURIComponent(id)}`);
+  }
+
+  async createCollection(name, description) {
+    return this.api.post("/features/collections", { name, description });
+  }
+
+  async updateCollection(id, name, description) {
+    return this.api.request(`/features/collections/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name, description }),
+    });
+  }
+
+  async deleteCollection(id) {
+    return this.api.delete(`/features/collections/${encodeURIComponent(id)}`);
+  }
+
+  async addDocumentToCollection(collectionId, documentId) {
+    return this.api.post(
+      `/features/collections/${encodeURIComponent(collectionId)}/documents`,
+      { documentId },
+    );
+  }
+
+  async removeDocumentFromCollection(collectionId, documentId) {
+    return this.api.delete(
+      `/features/collections/${encodeURIComponent(collectionId)}/documents/${encodeURIComponent(documentId)}`,
+    );
+  }
+
   notifications() {
     return this.data.notifications || [];
   }
