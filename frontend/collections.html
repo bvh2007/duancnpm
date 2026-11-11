@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#2563eb" />
+    <title>Bộ sưu tập cá nhân - TàiLiệuSV</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="css/collections.css" />
+  </head>
+  <body>
+    <header class="navbar">
+      <a class="brand" href="index.html" aria-label="TàiLiệuSV trang chủ">
+        <span class="brand-mark">T</span><span>TàiLiệu<span>SV</span></span>
+      </a>
+      <nav class="main-nav">
+        <a href="index.html">Trang chủ</a>
+        <a href="Documents.html">Tài liệu</a>
+        <a href="collections.html" aria-current="page">Bộ sưu tập</a>
+      </nav>
+    </header>
+
+    <main class="collections-page container" id="collectionsRoot">
+      <section class="collections-heading">
+        <span class="eyebrow">KHÔNG GIAN HỌC TẬP CỦA BẠN</span>
+        <h1>Bộ sưu tập tài liệu</h1>
+        <p>Tạo nhóm tài liệu theo môn học, kỳ thi hoặc kế hoạch học tập.</p>
+      </section>
+
+      <section class="collection-panel" id="authMessage" hidden>
+        <h2>Đăng nhập để dùng bộ sưu tập</h2>
+        <p>Bộ sưu tập được lưu riêng cho tài khoản của bạn.</p>
+        <a class="btn btn-primary" href="index.html">Đăng nhập</a>
+      </section>
+
+      <div id="collectionWorkspace" hidden>
+        <section class="collection-panel">
+          <h2 id="collectionFormTitle">Tạo bộ sưu tập</h2>
+          <form id="collectionForm" class="collection-form">
+            <label>
+              Tên bộ sưu tập
+              <input id="collectionName" maxlength="100" required
+                placeholder="Ví dụ: Ôn thi Cơ sở dữ liệu" />
+            </label>
+            <label>
+              Mô tả <span class="muted">(không bắt buộc)</span>
+              <textarea id="collectionDescription" maxlength="500" rows="3"
+                placeholder="Ghi chú về bộ sưu tập này"></textarea>
+            </label>
+            <div class="collection-form-actions">
+              <button class="btn btn-primary" id="collectionSubmit" type="submit">Tạo bộ sưu tập</button>
+              <button class="btn btn-outline" id="collectionCancel" type="button" hidden>Hủy chỉnh sửa</button>
+            </div>
+          </form>
+          <p class="collection-status" id="collectionStatus" role="status"></p>
+        </section>
+
+        <section class="collection-panel">
+          <div class="collection-section-heading">
+            <div>
+              <h2>Bộ sưu tập của tôi</h2>
+              <p class="muted" id="collectionCount"></p>
+            </div>
+            <label class="collection-picker">
+              Đang xem
+              <select id="collectionSelect" aria-label="Chọn bộ sưu tập"></select>
+            </label>
+          </div>
+          <div id="collectionList" class="collection-list"></div>
+          <div id="savedDocuments" class="saved-documents"></div>
+        </section>
+
+        <section class="collection-panel">
+          <h2>Thêm tài liệu vào bộ sưu tập</h2>
+          <p class="muted">Tìm tài liệu đã được duyệt rồi lưu vào bộ sưu tập đang chọn.</p>
+          <form id="documentSearchForm" class="document-search-form">
+            <input id="documentSearch" type="search" placeholder="Tên tài liệu hoặc môn học" />
+            <button class="btn btn-primary" type="submit">Tìm tài liệu</button>
+          </form>
+          <div id="documentResults" class="collection-documents"></div>
+        </section>
+      </div>
+    </main>
+
+    <script type="module" src="js/pages/CollectionsPage.js"></script>
+  </body>
+</html>

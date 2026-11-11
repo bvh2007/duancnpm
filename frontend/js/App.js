@@ -57,6 +57,13 @@ export default class App {
         onDetail: (id) => this.showDetail(id),
         onFavorite: (id) => this.toggleFavorite(id),
         onReport: (id) => this.report(id),
+        onCollection: (id) => {
+          if (!this.authService.currentUser) {
+            this.authModal.show("login");
+            return;
+          }
+          window.location.href = `collections.html?documentId=${encodeURIComponent(id)}`;
+        },
       },
     );
     this.searchInput = document.getElementById("searchInput");
