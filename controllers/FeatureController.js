@@ -47,6 +47,63 @@ class FeatureController {
     }),
   );
 
+  collections = asyncHandler(async (req, res) =>
+    res.json(await this.service.collections(req.user.id)),
+  );
+
+  collection = asyncHandler(async (req, res) =>
+    res.json(await this.service.collection(req.params.id, req.user.id)),
+  );
+
+  createCollection = asyncHandler(async (req, res) =>
+    res
+      .status(201)
+      .json(
+        await this.service.createCollection(
+          req.user.id,
+          req.body.name,
+          req.body.description,
+        ),
+      ),
+  );
+
+  updateCollection = asyncHandler(async (req, res) =>
+    res.json(
+      await this.service.updateCollection(
+        req.params.id,
+        req.user.id,
+        req.body.name,
+        req.body.description,
+      ),
+    ),
+  );
+
+  deleteCollection = asyncHandler(async (req, res) =>
+    res.json(await this.service.deleteCollection(req.params.id, req.user.id)),
+  );
+
+  addDocumentToCollection = asyncHandler(async (req, res) =>
+    res
+      .status(201)
+      .json(
+        await this.service.addDocumentToCollection(
+          req.params.id,
+          req.user.id,
+          req.body.documentId,
+        ),
+      ),
+  );
+
+  removeDocumentFromCollection = asyncHandler(async (req, res) =>
+    res.json(
+      await this.service.removeDocumentFromCollection(
+        req.params.id,
+        req.user.id,
+        req.params.documentId,
+      ),
+    ),
+  );
+
   comment = asyncHandler(async (req, res) =>
     res.json(
       await this.service.comments(
