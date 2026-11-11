@@ -162,6 +162,154 @@ class FeatureService {
     return true;
   }
 
+  async collections(userId) {
+    const [rows] = await this.db.pool.query(
+      `SELECT c.collection_id AS id,c.name,c.description,c.created_at AS createdAt,
+        COUNT(d.doc_id) AS documentCount
+      FROM collections c
+      LEFT JOIN collection_documents cd ON cd.collection_id=c.collection_id
+      LEFT JOIN documents d ON d.doc_id=cd.doc_id AND d.deleted_at IS NULL
+      WHERE c.user_id=?
+      GROUP BY c.collection_id
+      ORDER BY c.updated_at DESC,c.collection_id DESC`,
+      [userId],
+    );
+    return rows.map((row) => ({
+      ...row,
+      id: String(row.id),
+      documentCount: Number(row.documentCount),
+    }));
+  }
+
+  async collection(collectionId, userId) {
+    const id = this.positiveId(collectionId, "Bộ sưu tập");
+    const [[collection]] = await this.db.pool.query(
+      `SELECT collection_id AS id,name,description,created_at AS createdAt
+      FROM collections WHERE collection_id=? AND user_id=? LIMIT 1`,
+      [id, userId],
+    );
+    if (!collection) throw new AppError("Không tìm thấy bộ sưu tập", 404);
+
+    const [documents] = await this.db.pool.query(
+      `SELECT d.doc_id AS id,d.title,d.description,d.original_filename AS originalName,
+        d.file_type AS fileType,d.document_type AS type,d.access_level AS accessLevel,
+        d.file_size AS fileSize,d.download_count AS downloads,d.created_at AS createdAt,
+        s.name AS subject
+      FROM collection_documents cd
+      JOIN documents d ON d.doc_id=cd.doc_id
+      LEFT JOIN subjects s ON s.subject_id=d.subject_id
+      WHERE cd.collection_id=? AND d.deleted_at IS NULL AND d.status='approved'
+      ORDER BY cd.created_at DESC`,
+      [id],
+    );
+    return {
+      ...collection,
+      id: String(collection.id),
+      documents: documents.map((document) => ({
+        ...document,
+        id: String(document.id),
+        fileSize: Number(document.fileSize),
+        downloads: Number(document.downloads),
+      })),
+    };
+  }
+
+  async createCollection(userId, name, description = "") {
+    const values = this.validateCollection(name, description);
+    try {
+      const [result] = await this.db.pool.query(
+        "INSERT INTO collections(user_id,name,description) VALUES(?,?,?)",
+        [userId, values.name, values.description],
+      );
+      return this.collection(result.insertId, userId);
+    } catch (error) {
+      if (error.code === "ER_DUP_ENTRY")
+        throw new AppError("Bạn đã có bộ sưu tập cùng tên", 409);
+      throw error;
+    }
+  }
+
+  async updateCollection(collectionId, userId, name, description = "") {
+    const id = this.positiveId(collectionId, "Bộ sưu tập");
+    const values = this.validateCollection(name, description);
+    await this.requireCollection(id, userId);
+    try {
+      await this.db.pool.query(
+        "UPDATE collections SET name=?,description=? WHERE collection_id=? AND user_id=?",
+        [values.name, values.description, id, userId],
+      );
+      return this.collection(id, userId);
+    } catch (error) {
+      if (error.code === "ER_DUP_ENTRY")
+        throw new AppError("Bạn đã có bộ sưu tập cùng tên", 409);
+      throw error;
+    }
+  }
+
+  async deleteCollection(collectionId, userId) {
+    const id = this.positiveId(collectionId, "Bộ sưu tập");
+    await this.requireCollection(id, userId);
+    await this.db.pool.query(
+      "DELETE FROM collections WHERE collection_id=? AND user_id=?",
+      [id, userId],
+    );
+    return { deleted: true };
+  }
+
+  async addDocumentToCollection(collectionId, userId, documentId) {
+    const id = this.positiveId(collectionId, "Bộ sưu tập");
+    const docId = this.positiveId(documentId, "Tài liệu");
+    await this.requireCollection(id, userId);
+    const [[document]] = await this.db.pool.query(
+      "SELECT doc_id FROM documents WHERE doc_id=? AND status='approved' AND deleted_at IS NULL LIMIT 1",
+      [docId],
+    );
+    if (!document)
+      throw new AppError("Không tìm thấy tài liệu đã được duyệt", 404);
+    await this.db.pool.query(
+      "INSERT IGNORE INTO collection_documents(collection_id,doc_id) VALUES(?,?)",
+      [id, docId],
+    );
+    return this.collection(id, userId);
+  }
+
+  async removeDocumentFromCollection(collectionId, userId, documentId) {
+    const id = this.positiveId(collectionId, "Bộ sưu tập");
+    const docId = this.positiveId(documentId, "Tài liệu");
+    await this.requireCollection(id, userId);
+    await this.db.pool.query(
+      "DELETE FROM collection_documents WHERE collection_id=? AND doc_id=?",
+      [id, docId],
+    );
+    return { removed: true };
+  }
+
+  async requireCollection(collectionId, userId) {
+    const [[collection]] = await this.db.pool.query(
+      "SELECT collection_id FROM collections WHERE collection_id=? AND user_id=? LIMIT 1",
+      [collectionId, userId],
+    );
+    if (!collection) throw new AppError("Không tìm thấy bộ sưu tập", 404);
+  }
+
+  validateCollection(name, description) {
+    const normalizedName = typeof name === "string" ? name.trim() : "";
+    const normalizedDescription =
+      typeof description === "string" ? description.trim() : "";
+    if (!normalizedName || normalizedName.length > 100)
+      throw new AppError("Tên bộ sưu tập phải có từ 1 đến 100 ký tự", 400);
+    if (normalizedDescription.length > 500)
+      throw new AppError("Mô tả không được vượt quá 500 ký tự", 400);
+    return { name: normalizedName, description: normalizedDescription };
+  }
+
+  positiveId(value, label) {
+    const id = Number(value);
+    if (!Number.isSafeInteger(id) || id < 1)
+      throw new AppError(`${label} không hợp lệ`, 400);
+    return id;
+  }
+
   async comments(docId, userId, text, parentId) {
     if (!text?.trim()) {
       throw new AppError("Bình luận không được để trống", 400);
